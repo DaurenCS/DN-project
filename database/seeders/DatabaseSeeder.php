@@ -14,7 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
         $roles = [
             'admin',
             'HR',
@@ -27,11 +26,13 @@ class DatabaseSeeder extends Seeder
             Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
 
-        $admin = User::factory()->create([
-            'name' => 'admin',
-            'email' => 'admin@admin.com',
-            'password' => '1234',
-        ]);
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            [
+                'name'     => 'admin',
+                'password' => bcrypt('1234'),
+            ]
+        );
 
         $admin->assignRole('admin');
     }
