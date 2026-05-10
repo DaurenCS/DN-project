@@ -14,7 +14,9 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     libwebp-dev \
     freetype-dev \
-    oniguruma-dev
+    oniguruma-dev \
+    icu-dev \
+    libzip-dev
 
 # PHP расширения
 RUN docker-php-ext-configure gd \
@@ -30,10 +32,14 @@ RUN docker-php-ext-configure gd \
         pcntl \
         bcmath \
         gd \
-        opcache
+        opcache \
+        intl \
+        zip
 
 # Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /var/www/html
 
