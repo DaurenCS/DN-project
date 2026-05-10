@@ -65,6 +65,10 @@ RUN mkdir -p storage/logs \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
+# Убеждаемся что mime.types на месте
+RUN ln -sf /etc/nginx/mime.types /etc/nginx/mime.types || true \
+    && nginx -t 2>/dev/null || true
+
 # Nginx конфиг
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
