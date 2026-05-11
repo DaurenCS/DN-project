@@ -13,13 +13,15 @@ php artisan migrate --force
 echo "==> Running seeders..."
 php artisan db:seed --force
 
+echo "==> Publishing Livewire assets..."
+php artisan livewire:publish --assets
+
 echo "==> Publishing Filament assets..."
 php artisan filament:assets
 
 echo "==> Caching..."
 php artisan config:cache
 php artisan view:cache
-# route:cache убрали — конфликтует с Filament
 
 echo "==> Creating storage link..."
 php artisan storage:link || true
