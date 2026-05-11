@@ -18,8 +18,8 @@ php artisan filament:assets
 
 echo "==> Caching..."
 php artisan config:cache
-php artisan route:cache
 php artisan view:cache
+# route:cache убрали — конфликтует с Filament
 
 echo "==> Creating storage link..."
 php artisan storage:link || true
