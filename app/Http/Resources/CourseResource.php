@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class CourseResource extends JsonResource
 {
@@ -19,7 +20,7 @@ class CourseResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'slug' => $this->slug,
-            'image' => $this->image,
+            'image' => $this->image ? Storage::url($this->image) : null,
             'is_active' => (bool)$this->is_active,
             'created_at' => $this->created_at->toISOString(),
         ];

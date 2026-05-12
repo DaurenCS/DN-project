@@ -80,17 +80,6 @@ class CourseResource extends Resource
                         )
                         ->searchable()
                         ->required(),
-
-                    Forms\Components\Select::make('status')
-                        ->label('Статус')
-                        ->options([
-                            'draft'     => 'Черновик',
-                            'published' => 'Опубликован',
-                            'archived'  => 'Архив',
-                        ])
-                        ->default('draft')
-                        ->required(),
-
                     Forms\Components\Toggle::make('is_active')
                         ->label('Активен')
                         ->default(true),
@@ -113,6 +102,8 @@ class CourseResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Обложка')
+                    ->disk('public') // Указываем диск явно
+                    ->visibility('public')
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('name')
@@ -138,17 +129,6 @@ class CourseResource extends Resource
                     ->label('Уроков')
                     ->counts('lessons')
                     ->sortable(),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Статус')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'published' => 'success',
-                        'draft'     => 'warning',
-                        'archived'  => 'danger',
-                        default     => 'gray',
-                    }),
-
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),

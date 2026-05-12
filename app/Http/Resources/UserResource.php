@@ -25,7 +25,6 @@ class UserResource extends JsonResource
             'roles'       => $this->roles->map(function ($role) {
                 return [
                     'name'         => $role->name,
-                    'display_name' => __("roles.{$role->name}"),
                 ];
             }),
             'last_login_at' => $this->last_login_at?->toISOString(),
