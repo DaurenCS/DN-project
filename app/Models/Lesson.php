@@ -37,9 +37,4 @@ class Lesson extends Model
     {
         return $this->belongsTo(Module::class);
     }
-
-    public function getCourseAttribute()
-    {
-        return $this->module?->course;
-    }
 }
