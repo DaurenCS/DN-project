@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\CourseType;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -35,5 +36,12 @@ class DatabaseSeeder extends Seeder
         );
 
         $admin->assignRole('admin');
+
+        CourseType::query()->create([
+            'name'       => json_encode(['ru' => 'Тестовый тип']),
+            'is_active'  => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

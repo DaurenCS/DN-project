@@ -3,7 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CourseResource\Pages;
-use App\Filament\Resources\CourseResource\RelationManagers\LessonsRelationManager;
+use App\Filament\Resources\CourseResource\RelationManagers\ModuleRelationManager;
 use App\Models\Course;
 use App\Models\CourseType;
 use Filament\Forms;
@@ -108,26 +108,16 @@ class CourseResource extends Resource
 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Название')
-                    ->getStateUsing(fn ($record) =>
-                    $record->getTranslation('name', 'ru')
-                        ?: $record->getTranslation('name', 'en')
-                        ?: '—'
-                    )
                     ->searchable(false)
                     ->sortable(false),
 
                 Tables\Columns\TextColumn::make('courseType.name')
                     ->label('Тип')
-                    ->badge()
-                    ->getStateUsing(fn ($record) =>
-                    $record->courseType?->getTranslation('name', 'ru')
-                        ?: $record->courseType?->getTranslation('name', 'en')
-                        ?: '—'
-                    ),
+                    ->badge(),
 
-                Tables\Columns\TextColumn::make('lessons_count')
-                    ->label('Уроков')
-                    ->counts('lessons')
+                Tables\Columns\TextColumn::make('modules_count')
+                    ->label('Модули')
+                    ->counts('modules')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Активен')
@@ -173,7 +163,7 @@ class CourseResource extends Resource
     public static function getRelations(): array
     {
         return [
-            LessonsRelationManager::class,
+            ModuleRelationManager::class,
         ];
     }
 

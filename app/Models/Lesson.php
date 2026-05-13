@@ -15,10 +15,17 @@ class Lesson extends Model
         'slug',
         'name',
         'description',
-        'course_id',
+        'content',
+        'module_id',
         'is_active',
         'sort_order',
 
+    ];
+
+    protected $casts = [
+        'name' => 'array',
+        'content' => 'array', // Должно быть тут
+        'is_active' => 'boolean',
     ];
 
     public $translatable = [
@@ -26,8 +33,13 @@ class Lesson extends Model
         'description',
     ];
 
-    public function course()
+    public function module()
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Module::class);
+    }
+
+    public function getCourseAttribute()
+    {
+        return $this->module?->course;
     }
 }

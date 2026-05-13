@@ -30,9 +30,13 @@ class Course extends Model
         return $this->belongsTo(CourseType::class, 'course_type_id');
     }
 
-    public function lessons()
+    public function modules()
     {
-        return $this->hasMany(Lesson::class)->orderBy('sort_order');
+        return $this->hasMany(Module::class)->orderBy('order');
+    }
+
+    public function lessons() {
+        return $this->hasManyThrough(Lesson::class, Module::class);
     }
 
 }

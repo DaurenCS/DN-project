@@ -2,17 +2,18 @@
 
 namespace App\Filament\Resources\CourseResource\RelationManagers;
 
+use App\Filament\Resources\ModuleResource;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
-
-class LessonsRelationManager extends RelationManager
+use App\Filament\Resources\LessonResource;
+class ModuleRelationManager extends RelationManager
 {
-    protected static string $relationship = 'lessons';
-    protected static ?string $title = 'Уроки курса';
+    protected static string $relationship = 'modules';
+    protected static ?string $title = 'Модули курса';
 
     public function form(Form $form): Form
     {
@@ -28,36 +29,21 @@ class LessonsRelationManager extends RelationManager
                                 ->afterStateUpdated(function ($state, Forms\Set $set) {
                                     $set('slug', Str::slug($state));
                                 }),
-                            Forms\Components\Textarea::make('description.ru')
-                                ->label('Описание')
-                                ->rows(3),
                         ]),
                     Forms\Components\Tabs\Tab::make('EN')
                         ->schema([
                             Forms\Components\TextInput::make('name.en')
                                 ->label('Название'),
-                            Forms\Components\Textarea::make('description.en')
-                                ->label('Описание')
-                                ->rows(3),
                         ]),
                     Forms\Components\Tabs\Tab::make('KZ')
                         ->schema([
                             Forms\Components\TextInput::make('name.kz')
                                 ->label('Название'),
-                            Forms\Components\Textarea::make('description.kz')
-                                ->label('Описание')
-                                ->rows(3),
                         ]),
                 ])
                 ->columnSpanFull(),
 
-            Forms\Components\TextInput::make('slug')
-                ->label('Slug')
-                ->required()
-                ->unique(ignoreRecord: true)
-                ->columnSpanFull(),
-
-            Forms\Components\TextInput::make('sort_order')
+            Forms\Components\TextInput::make('order')
                 ->label('Порядок')
                 ->numeric()
                 ->default(0),
@@ -71,21 +57,19 @@ class LessonsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->recordUrl(
+                fn ($record): string => ModuleResource::getUrl('edit', ['record' => $record]),
+            )
             ->recordTitleAttribute('name')
-            ->reorderable('sort_order')
-            ->defaultSort('sort_order')
+            ->reorderable('order')
+            ->defaultSort('order')
             ->columns([
-                Tables\Columns\TextColumn::make('sort_order')
+                Tables\Columns\TextColumn::make('order')
                     ->label('#')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Название')
-                    ->getStateUsing(fn ($record) =>
-                    $record->getTranslation('name', 'ru')
-                        ?: $record->getTranslation('name', 'en')
-                        ?: '—'
-                    ),
+                    ->label('Название'),
 
                 Tables\Columns\TextColumn::make('slug')
                     ->label('Slug')
@@ -97,9 +81,14 @@ class LessonsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('Добавить урок'),
+                    ->label('Добавить Модуль'),
             ])
             ->actions([
+                Tables\Actions\Action::make('edit')
+                    ->label('Редактировать')
+                    ->icon('heroicon-m-pencil-square')
+                    ->url(fn ($record): string => ModuleResource::getUrl('edit', ['record' => $record])),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
