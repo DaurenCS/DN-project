@@ -15,9 +15,13 @@ class CourseService
         //
     }
 
-    public function getCourses()
+    public function getCourses($slug = null)
     {
-        $courses = Course::where('is_active', true)->get();
+        $courses = Course::where('is_active', true)
+            ->when($slug, function ($query, $slug) {
+                return $query->where('slug', $slug);
+            })
+            ->get();
 
         return CourseResource::collection($courses);
     }

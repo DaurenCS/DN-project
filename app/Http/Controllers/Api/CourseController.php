@@ -17,4 +17,9 @@ class CourseController extends Controller
     {
         return $this->courseService->getCourses();
     }
+
+    public function getCourse($slug)
+    {
+        return $this->courseService->getCourses($slug);
+    }
 }
