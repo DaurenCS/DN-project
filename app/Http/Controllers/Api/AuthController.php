@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UserRequest;
 use App\Services\AuthService;
 
 class AuthController extends Controller
@@ -26,4 +27,11 @@ class AuthController extends Controller
     {
         return $this->authService->me();
     }
+
+    public function update(UserRequest $request)
+    {
+        return $this->authService->update($request);
+    }
+
+
 }

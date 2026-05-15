@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UserRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
 
@@ -61,5 +62,10 @@ class AuthService
         return response()->json([
             'user' => new UserResource(auth()->user()),
         ]);
+    }
+
+    public function update(UserRequest $request)
+    {
+        return false;
     }
 }

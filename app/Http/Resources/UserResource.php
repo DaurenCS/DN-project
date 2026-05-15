@@ -16,15 +16,18 @@ class UserResource extends JsonResource
     {
         return [
             'id'          => $this->id,
-            'name'        => $this->name,
+            'first_name'        => $this->name,
+            'second_name'        => $this->second_name,
             'email'       => $this->email,
             'phone'       => $this->phone,
             'position'    => $this->position,
+
+            'birthday'    => $this->birthday,
             'department'  => $this->department,
             'is_active'   => $this->is_active,
             'roles'       => $this->roles->map(function ($role) {
                 return [
-                    'name'         => $role->name,
+                    'name'         => __("roles.{$role->name}"),
                 ];
             }),
             'last_login_at' => $this->last_login_at?->toISOString(),
