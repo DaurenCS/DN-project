@@ -6,6 +6,7 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,6 +24,8 @@ class User extends Authenticatable implements FilamentUser
      */
     protected $fillable = [
         'name',
+        'second_name',
+        'birthday',
         'email',
         'password',
         'phone',
@@ -53,6 +56,15 @@ class User extends Authenticatable implements FilamentUser
         'last_login_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'user_course')
+            ->using(UserCourse::class)
+            ->withPivot(['start_date', 'end_date', 'progress'])
+            ->withTimestamps();
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {

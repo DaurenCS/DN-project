@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\UserRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
 
@@ -64,8 +64,22 @@ class AuthService
         ]);
     }
 
-    public function update(UserRequest $request)
+    public function update(UpdateProfileRequest $request)
     {
-        return false;
+        $user = auth()->user();
+        $validated = $request->validated();
+
+        if (array_key_exists('first_name', $validated)) {
+            $validated['name'] = $validated['first_name'];
+            unset($validated['first_name']);
+        }
+
+        $user->update($validated);
+
+        return response()->json([
+            'message' => 'Профиль успешно обновлен',
+            'user'    => new UserResource($user->refresh())
+        ], 200);
+
     }
 }

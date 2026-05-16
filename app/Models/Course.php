@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 use Spatie\Translatable\HasTranslations;
 
 class Course extends Model
@@ -25,6 +27,18 @@ class Course extends Model
         'description',
     ];
 
+    public function scopeWithAuthUserProgress(Builder $query): Builder
+    {
+        $user = Auth::guard('sanctum')->user();
+        if (!$user) {
+            return $query;
+        }
+
+        return $query->with(['users' => function ($q) use ($user) {
+            $q->where('users.id', $user->id);
+        }]);
+    }
+
     public function courseType()
     {
         return $this->belongsTo(CourseType::class, 'course_type_id');
@@ -38,5 +52,14 @@ class Course extends Model
     public function lessons() {
         return $this->hasManyThrough(Lesson::class, Module::class);
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_course')
+            ->using(UserCourse::class)
+            ->withPivot(['start_date', 'end_date', 'progress'])
+            ->withTimestamps();
+    }
+
 
 }

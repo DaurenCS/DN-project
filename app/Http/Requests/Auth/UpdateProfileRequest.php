@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Http\Requests\Auth;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateProfileRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return auth()->check();
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        $user = auth()->user();
+
+        return [
+            'first_name'  => ['sometimes', 'required', 'string', 'max:255'],
+            'second_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email'       => [
+                'sometimes',
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id)
+            ],
+            'phone'       => ['sometimes', 'nullable', 'string', 'max:50'],
+            'position'    => ['sometimes', 'nullable', 'string', 'max:255'],
+            'birthday'    => ['sometimes', 'nullable', 'date', 'before:today'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.email'          => 'Введите корректный email адрес.',
+            'email.unique'         => 'Этот email уже занят другим пользователем.',
+            'birthday.date'        => 'Некорректный формат даты.',
+            'birthday.before'      => 'Дата рождения должна быть в прошлом.',
+        ];
+    }
+}

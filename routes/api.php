@@ -15,6 +15,7 @@ Route::prefix('auth')->group(function () {
         Route::group(['prefix' => 'profile'], function () {
             Route::get('/', [AuthController::class, 'me']);
             Route::put('/update', [AuthController::class, 'update']);
+            Route::get('/courses', [CourseController::class, 'getUserCourses']);
         });
 
     });

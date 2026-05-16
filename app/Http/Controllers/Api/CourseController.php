@@ -15,11 +15,16 @@ class CourseController extends Controller
 
     public function getCourseList(Request $request)
     {
-        return $this->courseService->getCourses();
+        return $this->courseService->getCourses($request);
     }
 
     public function getCourse($slug)
     {
-        return $this->courseService->getCourses($slug);
+        return $this->courseService->getCourse($slug);
+    }
+
+    public function getUserCourses()
+    {
+        return $this->courseService->getUserCourses();
     }
 }
