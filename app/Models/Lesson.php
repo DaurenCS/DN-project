@@ -37,4 +37,18 @@ class Lesson extends Model
     {
         return $this->belongsTo(Module::class);
     }
+
+    public function conspects()
+    {
+        return $this->hasMany(LessonConspect::class)->orderBy('sort_order', 'asc');
+    }
+    public function videos()
+    {
+        return $this->hasMany(LessonVideo::class)->orderBy('sort_order', 'asc');
+    }
+    public function tests()
+    {
+        return $this->hasMany(Test::class)->orderBy('sort_order', 'asc');
+    }
+
 }

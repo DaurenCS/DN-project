@@ -3,6 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\LessonResource\Pages;
+use App\Filament\Resources\LessonResource\RelationManagers\ConspectsRelationManager;
+use App\Filament\Resources\LessonResource\RelationManagers\TestsRelationManager;
+use App\Filament\Resources\LessonResource\RelationManagers\VideosRelationManager;
 use App\Models\Lesson;
 use App\Models\Module;
 use Filament\Forms;
@@ -216,6 +219,15 @@ class LessonResource extends Resource
             'index'  => Pages\ListLessons::route('/'),
             'create' => Pages\CreateLesson::route('/create'),
             'edit'   => Pages\EditLesson::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            ConspectsRelationManager::class,
+            VideosRelationManager::class,
+            TestsRelationManager::class,
         ];
     }
 }
