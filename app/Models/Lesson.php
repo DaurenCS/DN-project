@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
 
@@ -46,9 +47,12 @@ class Lesson extends Model
     {
         return $this->hasMany(LessonVideo::class)->orderBy('sort_order', 'asc');
     }
-    public function tests()
+    public function tests(): BelongsToMany
     {
-        return $this->hasMany(Test::class)->orderBy('sort_order', 'asc');
+        return $this->belongsToMany(Test::class, 'lesson_test')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderBy('lesson_test.sort_order', 'asc');
     }
 
 }
