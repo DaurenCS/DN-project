@@ -27,4 +27,14 @@ class CourseController extends Controller
     {
         return $this->courseService->getUserCourses();
     }
+
+    public function start($slug)
+    {
+        return $this->courseService->start($slug);
+    }
+
+    public function buy($slug)
+    {
+        return null;
+    }
 }

@@ -32,7 +32,7 @@ class CourseResource extends JsonResource
         ];
     }
 
-    private function extractUserProgress()
+    protected function extractUserProgress()
     {
         if ($this->pivot) {
             return [

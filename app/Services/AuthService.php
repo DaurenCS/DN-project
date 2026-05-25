@@ -22,7 +22,7 @@ class AuthService
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
                 'message' => 'Неверный email или пароль',
-            ], 401);
+            ], 404);
         }
 
         $user = Auth::user();

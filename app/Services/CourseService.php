@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Http\Resources\CourseDetailResource;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
+use App\Models\UserCourse;
+use App\Models\UserCourseLesson;
 use Illuminate\Http\Request;
 
 class CourseService
@@ -35,15 +38,17 @@ class CourseService
     {
         $course = Course::query()
             ->withAuthUserProgress()
-            ->with(['modules', 'lessons'])
-            ->where('is_active', true)
             ->where('slug', $slug)
+            ->where('is_active', true)
+            ->withCount(['modules', 'lessons'])
+            ->with(['modules.lessons' => function ($query) {
+                $query->withExists('currentAuthProgress');
+            }])
             ->firstOrFail();
 
-        return CourseResource::make($course);
+        return CourseDetailResource::make($course);
 
     }
-
     public function getUserCourses()
     {
         $user = auth()->user();
@@ -53,6 +58,30 @@ class CourseService
             ->get();
 
         return CourseResource::collection($courses);
+
+    }
+
+    public function start($slug)
+    {
+        $user = auth()->user();
+        $course = Course::query()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $userCourse = UserCourse::query()
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        if ($userCourse->start_date) {
+            return response()->json(['message' => 'Course already started'], 400);
+        }
+
+        $userCourse->update([
+            'start_date' => now(),
+        ]);
+
+        return response()->json(['message' => 'Course started'], 200);
 
     }
 }

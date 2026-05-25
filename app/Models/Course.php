@@ -33,7 +33,6 @@ class Course extends Model
         if (!$user) {
             return $query;
         }
-
         return $query->with(['users' => function ($q) use ($user) {
             $q->where('users.id', $user->id);
         }]);
@@ -57,8 +56,19 @@ class Course extends Model
     {
         return $this->belongsToMany(User::class, 'user_course')
             ->using(UserCourse::class)
-            ->withPivot(['start_date', 'end_date', 'progress'])
+            ->withPivot(['id','start_date', 'end_date', 'progress'])
             ->withTimestamps();
+    }
+
+    public function getCurrentLesson()
+    {
+        if (!$this->relationLoaded('modules')) {
+            return null;
+        }
+        return $this->modules
+            ->flatMap(fn($module) => $module->lessons)
+            ->first(fn($lesson) => !$lesson->current_auth_progress_exists);
+
     }
 
 

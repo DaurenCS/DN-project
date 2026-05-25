@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -26,5 +27,10 @@ class UserCourse extends Pivot
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function completedLessons()
+    {
+        return $this->hasMany(UserCourseLesson::class, 'user_course_id');
     }
 }
