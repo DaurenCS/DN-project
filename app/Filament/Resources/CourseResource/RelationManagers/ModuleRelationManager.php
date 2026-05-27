@@ -46,7 +46,12 @@ class ModuleRelationManager extends RelationManager
             Forms\Components\TextInput::make('order')
                 ->label('Порядок')
                 ->numeric()
-                ->default(0),
+                ->default(fn () => $this->getOwnerRecord()
+                        ->modules()
+                        ->max('order') + 1
+                )
+                ->minValue(0)
+                ->prefix('#'),
 
             Forms\Components\Toggle::make('is_active')
                 ->label('Активен')

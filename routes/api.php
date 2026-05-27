@@ -20,7 +20,7 @@ Route::prefix('auth')->group(function () {
     });
 });
 Route::middleware('auth:sanctum')->group(function () {
-    Route::group(['prefix' => 'lesson'], function () {
+    Route::group(['prefix' => 'lessons'], function () {
         Route::get('/{slug}', [LessonController::class, 'getLesson']);
     });
 });

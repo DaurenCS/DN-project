@@ -15,6 +15,7 @@ class CourseResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $userProgress = $this->extractUserProgress();
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -23,7 +24,8 @@ class CourseResource extends JsonResource
             'image' => $this->image ? Storage::url($this->image) : null,
             'is_active' => (bool)$this->is_active,
 
-            'user_progress' => $this->extractUserProgress(),
+            'user_progress' => $userProgress,
+            'user_status' => $this->getUserStatus($userProgress),
 
             'modules_count' => $this->whenCounted('modules'),
             'lessons_count' => $this->whenCounted('lessons'),
@@ -53,5 +55,22 @@ class CourseResource extends JsonResource
         }
 
         return null;
+    }
+
+    protected function getUserStatus($userProgress)
+    {
+        if (is_null($userProgress)) {
+            return 'buy';
+        }
+
+        if (!empty($userProgress['completed_at'])) {
+            return 'completed';
+        }
+
+        if (!empty($userProgress['start_date'])) {
+            return 'continue';
+        }
+        return 'start';
+
     }
 }

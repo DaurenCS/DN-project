@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
+use Spatie\EloquentSortable\SortableTrait;
 use Spatie\Translatable\HasTranslations;
 
 class Lesson extends Model
 {
-    use HasTranslations, HasFactory, SoftDeletes;
+    use HasTranslations, HasFactory, SoftDeletes, SortableTrait;
 
     protected $fillable = [
         'slug',
@@ -23,6 +24,16 @@ class Lesson extends Model
         'sort_order',
 
     ];
+
+    public $sortable = [
+        'order_column_name' => 'sort_order',
+        'sort_when_creating' => true,
+    ];
+
+    public function buildSortQuery()
+    {
+        return static::query()->where('module_id', $this->module_id);
+    }
 
     protected $casts = [
         'name' => 'array',

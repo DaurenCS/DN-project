@@ -157,7 +157,6 @@ class LessonResource extends Resource
 
                 Forms\Components\RichEditor::make("content.{$lang}")
                     ->label('Контент')
-                    ->required($isPrimary)
                     ->columnSpanFull(),
             ]);
     }
