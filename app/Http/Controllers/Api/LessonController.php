@@ -16,4 +16,9 @@ class LessonController extends Controller
     {
         return $this->lessonService->getLesson($slug);
     }
+
+    public function finishLesson($slug)
+    {
+        return $this->lessonService->finishLesson($slug);
+    }
 }

@@ -22,6 +22,7 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::group(['prefix' => 'lessons'], function () {
         Route::get('/{slug}', [LessonController::class, 'getLesson']);
+        Route::post('/{slug}/finish', [LessonController::class, 'finishLesson']);
     });
 });
 Route::group(['prefix' => 'courses'], function () {

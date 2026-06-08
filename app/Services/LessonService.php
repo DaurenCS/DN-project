@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
+use App\Models\UserCourse;
+use App\Models\UserCourseLesson;
 
 class LessonService
 {
@@ -47,6 +49,30 @@ class LessonService
 
         return LessonResource::make($lesson);
 
+
+    }
+
+    public function finishLesson($slug)
+    {
+        $auth = auth()->user();
+
+        $lesson = Lesson::query()
+            ->with(['module.course'])
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $course = $lesson->module->course;
+
+//        dd($course->);
+        $user_course = UserCourse::query()
+            ->where('course_id', $course->id)
+            ->where('user_id', $auth->id)
+            ->firstOrFail();
+
+        UserCourseLesson::query()->create([
+            'user_course' => $user_course->id,
+            'lesson_id' => $lesson->id,
+        ]);
 
     }
 }
