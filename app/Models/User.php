@@ -70,4 +70,12 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->is_active && $this->hasAnyRole(['admin']);
     }
+
+    public function getUserCourse(int $courseId): ?object
+    {
+        return UserCourse::query()
+            ->where('user_id', $this->id)
+            ->where('course_id', $courseId)
+            ->first();
+    }
 }

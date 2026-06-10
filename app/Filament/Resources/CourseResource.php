@@ -83,6 +83,11 @@ class CourseResource extends Resource
                     Forms\Components\Toggle::make('is_active')
                         ->label('Активен')
                         ->default(true),
+
+                    Forms\Components\Toggle::make('is_sequential')
+                        ->label('Последовательное прохождение')
+                        ->helperText('Включает строгое прохождение уроков по порядку.')
+                        ->default(true)
                 ])->columns(2),
 
             Forms\Components\Section::make('Изображение')
@@ -122,6 +127,10 @@ class CourseResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_sequential')
+                    ->label('Последовательный')
+                    ->boolean()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Создан')
@@ -147,6 +156,11 @@ class CourseResource extends Resource
                                     ?: '—',
                         ])
                     ),
+                Tables\Filters\TernaryFilter::make('is_sequential')
+                    ->label('Последовательность')
+                    ->placeholder('Все курсы')
+                    ->trueLabel('Только последовательные')
+                    ->falseLabel('В свободном порядке'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

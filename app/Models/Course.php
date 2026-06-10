@@ -19,7 +19,8 @@ class Course extends Model
         'course_type_id',
         'image',
         'is_active',
-        'slug'
+        'slug',
+        'is_sequential'
     ];
 
     public $translatable = [

@@ -6,6 +6,7 @@ use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use App\Models\UserCourse;
 use App\Models\UserCourseLesson;
+use Illuminate\Support\Facades\Gate;
 
 class LessonService
 {
@@ -20,28 +21,23 @@ class LessonService
     public function getLesson($slug)
     {
         $lesson = Lesson::query()
-            ->with(['videos', 'conspects', 'tests'])
+            ->with(['module.course','videos', 'conspects', 'tests'])
             ->where('slug', $slug)
             ->firstOrFail();
 
-        $neighbors = Lesson::query()
+        Gate::authorize('access', $lesson);
+
+        $previous = Lesson::query()
             ->where('module_id', $lesson->module_id)
-            ->where(function ($query) use ($lesson) {
-                $query->where('sort_order', '<', $lesson->sort_order)
-                    ->orderByDesc('sort_order')
-                    ->limit(1);
-            })
-            ->orWhere(function ($query) use ($lesson) {
-                $query->where('module_id', $lesson->module_id)
-                    ->where('sort_order', '>', $lesson->sort_order)
-                    ->orderBy('sort_order')
-                    ->limit(1);
-            })
-            ->get();
+            ->where('sort_order', '<', $lesson->sort_order)
+            ->orderByDesc('sort_order')
+            ->value('slug');
 
-        $previous = $neighbors->first(fn($item) => $item->sort_order < $lesson->sort_order)?->slug;
-        $next = $neighbors->first(fn($item) => $item->sort_order > $lesson->sort_order)?->slug;
-
+        $next = Lesson::query()
+            ->where('module_id', $lesson->module_id)
+            ->where('sort_order', '>', $lesson->sort_order)
+            ->orderBy('sort_order')
+            ->value('slug');
 
         $lesson->setAttribute('previous', $previous);
         $lesson->setAttribute('next', $next);
@@ -54,25 +50,44 @@ class LessonService
 
     public function finishLesson($slug)
     {
-        $auth = auth()->user();
-
         $lesson = Lesson::query()
             ->with(['module.course'])
             ->where('slug', $slug)
             ->firstOrFail();
 
+        Gate::authorize('access', $lesson);
+
+        $user = auth()->user();
         $course = $lesson->module->course;
 
-//        dd($course->);
-        $user_course = UserCourse::query()
-            ->where('course_id', $course->id)
-            ->where('user_id', $auth->id)
-            ->firstOrFail();
+        $userCourse = $user->getUserCourse($course->id);
 
-        UserCourseLesson::query()->create([
-            'user_course' => $user_course->id,
-            'lesson_id' => $lesson->id,
+        UserCourseLesson::query()->firstOrCreate([
+            'user_course_id' => $userCourse->id,
+            'lesson_id'   => $lesson->id,
         ]);
 
+        $totalLessonsCount = Lesson::query()
+            ->whereHas('module', function ($query) use ($course) {
+                $query->where('course_id', $course->id);
+            })
+            ->count();
+
+        $completedLessonsCount = UserCourseLesson::query()
+            ->where('user_course_id', $userCourse->id)
+            ->count();
+
+        $progress = $totalLessonsCount > 0
+            ? round(($completedLessonsCount / $totalLessonsCount) * 100)
+            : 0;
+
+        $userCourse->progress = $progress;
+        $userCourse->save();
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => 'Lesson marked as completed',
+            'progress' => $progress . '%'
+        ]);
     }
 }
