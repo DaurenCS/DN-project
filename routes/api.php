@@ -3,7 +3,10 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\LessonController;
+use App\Http\Controllers\Api\TestController;
 use Illuminate\Support\Facades\Route;
+
+// Импортируем новый контроллер тестов
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -16,13 +19,19 @@ Route::prefix('auth')->group(function () {
             Route::put('/update', [AuthController::class, 'update']);
             Route::get('/courses', [CourseController::class, 'getUserCourses']);
         });
-
     });
 });
+
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::group(['prefix' => 'lessons'], function () {
         Route::get('/{slug}', [LessonController::class, 'getLesson']);
         Route::post('/{slug}/finish', [LessonController::class, 'finishLesson']);
+    });
+    Route::prefix('tests/{test}')->group(function () {
+        Route::get('/', [TestController::class, 'show']);
+        Route::post('/questions/{question}/answer', [TestController::class, 'saveAnswer']);
+        Route::post('/submit', [TestController::class, 'submit']);
     });
 });
 Route::group(['prefix' => 'courses'], function () {
@@ -34,4 +43,3 @@ Route::group(['prefix' => 'courses'], function () {
         Route::post('{slug}/buy', [CourseController::class, 'buy']);
     });
 });
-

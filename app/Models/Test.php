@@ -34,7 +34,7 @@ class Test extends Model
 
     public function questions()
     {
-        return $this->hasMany(Question::class)->inRandomOrder();
+        return $this->hasMany(Question::class);
     }
 
 }
