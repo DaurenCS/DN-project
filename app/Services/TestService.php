@@ -20,14 +20,22 @@ class TestService
         //
     }
 
-    public function startTest(Test $test, Lesson $lesson, int $userId): TestAttempt
+    public function startTest(Test $test, ?int $lessonId, int $userId): TestAttempt
     {
-        $activeAttempt = TestAttempt::query()
+        $lesson = $lessonId ? Lesson::query()->findOrFail($lessonId) : null;
+
+        if ($lesson) {
+            Gate::authorize('access', $lesson);
+        }
+
+        $query = TestAttempt::query()
             ->where('user_id', $userId)
-            ->where('lesson_id', $lesson->id)
             ->where('test_id', $test->id)
-            ->where('status', 'in_progress')
-            ->first();
+            ->where('status', 'in_progress');
+
+        $this->applyLessonFilter($query, $lessonId ?? null);
+
+        $activeAttempt = $query->first();
 
         if ($activeAttempt) {
             if ($test->duration > 0 && now()->greaterThan($activeAttempt->created_at->addMinutes($test->duration))) {
@@ -45,7 +53,7 @@ class TestService
 
         return TestAttempt::query()->create([
             'user_id'         => $userId,
-            'lesson_id'       => $lesson->id,
+            'lesson_id'       => $lesson?->id,
             'test_id'         => $test->id,
             'total_questions' => count($shuffledQuestionIds),
             'question_ids'    => $shuffledQuestionIds,
@@ -57,13 +65,8 @@ class TestService
 
     public function getTest(Test $test, ?int $lessonId = null, int $userId): array
     {
-        $lesson = $lessonId ? Lesson::query()->findOrFail($lessonId) : null;
 
-        if ($lesson) {
-            Gate::authorize('access', $lesson);
-        }
-
-        $attempt = $this->startTest($test, $lesson, $userId);
+        $attempt = $this->startTest($test, $lessonId, $userId);
         $orderedIds = $attempt->question_ids;
 
         if (empty($orderedIds)) {
@@ -80,7 +83,7 @@ class TestService
 
         $savedAnswers = DB::table('test_attempt_answers')
             ->where('test_attempt_id', $attempt->id)
-            ->pluck('answer_id')
+            ->pluck('answer_id', 'question_id')
             ->toArray();
 
         return $this->formatTestResponse($test, $attempt, $questions, $savedAnswers);
@@ -191,12 +194,21 @@ class TestService
         return [
             'attempt_id'    => $attempt->id,
             'test_id'       => $test->id,
-            'title'         => $test->getTranslations('title'),
+            'title'         => $test->title,
             'duration'      => $test->duration,
             'time_left'     => $test->duration > 0
                 ? max(0, $attempt->created_at->addMinutes($test->duration)->diffInSeconds(now(), false) * -1)
                 : null,
-            'questions'     => $questions,
+            'questions'     => $questions->map(fn($question) => [
+                'id'    => $question->id,
+                'text' => $question->question_text,
+                'point' => $question->point,
+                'question_type' => $question->type?->name,
+                'answers' => $question->answers->map(fn($answer) => [
+                    'id' => $answer->id,
+                    'text' => $answer->answer,
+                ])
+            ]),
             'saved_answers' => $savedAnswers,
         ];
     }

@@ -17,6 +17,11 @@ class TestAttempt extends Model
         'attempts',
         'percent',
         'status',
+        'question_ids'
+    ];
+
+    public $casts = [
+        'question_ids' => 'array',
     ];
 
     public function test(): BelongsTo

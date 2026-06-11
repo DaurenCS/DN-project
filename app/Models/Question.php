@@ -23,9 +23,9 @@ class Question extends Model
         'question_text',
     ];
 
-    public function questionType(): BelongsTo
+    public function type(): BelongsTo
     {
-        return $this->belongsTo(QuestionType::class);
+        return $this->belongsTo(QuestionType::class, 'question_type_id');
     }
 
     public function test(): BelongsTo
