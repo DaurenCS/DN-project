@@ -24,7 +24,7 @@ class QuestionsRelationManager extends RelationManager
                     ->schema([
                         Forms\Components\Select::make('question_type_id')
                             ->label('Тип вопроса')
-                            ->relationship('questionType', 'name')
+                            ->relationship('type', 'name')
                             ->preload()
                             ->required(),
 
