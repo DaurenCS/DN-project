@@ -15,6 +15,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            QuestionTypeSeeder::class,
+        ]);
+
         $roles = [
             'admin',
             'HR',
@@ -38,7 +42,7 @@ class DatabaseSeeder extends Seeder
         $admin->assignRole('admin');
 
         CourseType::query()->create([
-            'name'       => json_encode(['ru' => 'Тестовый тип']),
+            'name' => ['ru' => 'Тестовый тип'],
             'is_active'  => true,
             'created_at' => now(),
             'updated_at' => now(),
