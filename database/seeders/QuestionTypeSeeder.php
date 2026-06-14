@@ -13,8 +13,10 @@ class QuestionTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        QuestionType::query()->firstOrCreate([
-            'name' => 'Test Question Type',
-        ]);
+        $types = ['single', 'multiple'];
+
+        foreach ($types as $type) {
+            QuestionType::query()->firstOrCreate(['name' => $type]);
+        }
     }
 }

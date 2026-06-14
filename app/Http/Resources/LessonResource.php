@@ -20,7 +20,11 @@ class LessonResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'content' => $this->content,
-
+            'course' => [
+                'id'   => $this->module->course->id,
+                'name' => $this->module->course->name,
+                'slug' => $this->module->course->slug,
+            ],
             'lesson_videos' => $this->videos,
             'lesson_conspects' => $this->conspects->map(function ($conspect) {
                 return [

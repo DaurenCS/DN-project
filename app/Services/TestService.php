@@ -200,16 +200,16 @@ class TestService
                 ? max(0, $attempt->created_at->addMinutes($test->duration)->diffInSeconds(now(), false) * -1)
                 : null,
             'questions'     => $questions->map(fn($question) => [
-                'id'    => $question->id,
-                'text' => $question->question_text,
-                'point' => $question->point,
-                'question_type' => $question->type?->name,
-                'answers' => $question->answers->map(fn($answer) => [
-                    'id' => $answer->id,
+                'id'            => $question->id,
+                'text'          => $question->question_text,
+                'point'         => $question->point,
+                'question_type' => $question->type?->id,
+                'user_answer'   => $savedAnswers[$question->id] ?? [],
+                'answers'       => $question->answers->map(fn($answer) => [
+                    'id'   => $answer->id,
                     'text' => $answer->answer,
                 ])
             ]),
-            'saved_answers' => $savedAnswers,
         ];
     }
 
