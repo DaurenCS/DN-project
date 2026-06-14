@@ -44,6 +44,7 @@ class Lesson extends Model
     public $translatable = [
         'name',
         'description',
+        'content',
     ];
 
     public function module()
