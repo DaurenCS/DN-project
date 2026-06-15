@@ -24,8 +24,9 @@ class TestController extends Controller
         $validated = $request->validate([
             'lesson_id' => 'nullable|integer|exists:lessons,id',
         ]);
+        $userId = auth()->user()->id;
 
-        $data = $this->testService->getTest($test, $validated['lesson_id'] ?? null, auth()->id());
+        $data = $this->testService->getTest($test, $userId,$validated['lesson_id'] ?? null, );
 
 
         return response()->json([
@@ -72,5 +73,10 @@ class TestController extends Controller
                 'status'          => $attempt->status,
             ],
         ]);
+    }
+
+    public function getResults(Test $test): JsonResponse
+    {
+        $this->testService->results($test);
     }
 }

@@ -7,37 +7,24 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class LessonResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'slug' => $this->slug,
+            'id'          => $this->id,
+            'name'        => $this->name,
+            'slug'        => $this->slug,
             'description' => $this->description,
-            'content' => $this->content,
-            'course' => [
+            'content'     => $this->content,
+            'course'      => [
                 'id'   => $this->module->course->id,
                 'name' => $this->module->course->name,
                 'slug' => $this->module->course->slug,
             ],
-            'lesson_videos' => $this->videos,
-            'lesson_conspects' => $this->conspects->map(function ($conspect) {
-                return [
-                    'id' => $conspect->id,
-                    'title' => $conspect->title,
-                    'content' => $conspect->content,
-                ];
-            }),
-            'lesson_tests' => $this->tests,
-
+            'lesson_videos'    => VideoResource::collection($this->whenLoaded('videos')),
+            'lesson_conspects' => ConspectResource::collection($this->whenLoaded('conspects')),
+            'lesson_tests'     => TestSummaryResource::collection($this->whenLoaded('tests')),
             'previous' => $this->previous,
-            'next' => $this->next,
-
+            'next'     => $this->next,
         ];
     }
 }

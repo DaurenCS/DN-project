@@ -5,24 +5,22 @@ namespace App\Services;
 use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use App\Models\TestAttempt;
-use App\Models\UserCourse;
+use App\Models\User;
 use App\Models\UserCourseLesson;
 use Illuminate\Support\Facades\Gate;
 
 class LessonService
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct()
+    public function getLesson(string $slug): LessonResource
     {
-        //
-    }
+        $userId = auth()->id();
 
-    public function getLesson($slug)
-    {
         $lesson = Lesson::query()
-            ->with(['module.course','videos', 'conspects', 'tests'])
+            ->with(['module.course', 'videos', 'conspects', 'tests' => function ($query) use ($userId) {
+                $query->with(['attempts' => function ($q) use ($userId) {
+                    $q->where('user_id', $userId)->where('status', 'passed');
+                }]);
+            }])
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -43,13 +41,14 @@ class LessonService
         $lesson->setAttribute('previous', $previous);
         $lesson->setAttribute('next', $next);
 
+        $lesson->tests->each(function ($test) {
+            $test->setAttribute('passed', $test->attempts->isNotEmpty());
+        });
 
         return LessonResource::make($lesson);
-
-
     }
 
-    public function finishLesson($slug)
+    public function finishLesson(string $slug): int
     {
         $lesson = Lesson::query()
             ->with(['module.course', 'tests'])
@@ -60,50 +59,49 @@ class LessonService
 
         $userId = auth()->id();
 
-        // ПРОВЕРКА: Сданы ли тесты урока (связь через user_id и lesson_id)
-        $testIds = $lesson->tests->pluck('id')->toArray();
-        if (!empty($testIds)) {
-            $passedAttemptsCount = TestAttempt::query()
-                ->where('user_id', $userId)
-                ->where('lesson_id', $lesson->id)
-                ->whereIn('test_id', $testIds)
-                ->where('status', 'passed')
-                ->distinct('test_id')
-                ->count('test_id');
-
-            if ($passedAttemptsCount < count($testIds)) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Необходимо успешно сдать все тесты этого урока.'
-                ], 403);
-            }
+        if (!$this->allTestsPassed($lesson, $userId)) {
+            abort(403, 'Необходимо успешно сдать все тесты этого урока.');
         }
 
-        // Если тестов нет или они сданы — закрываем урок
-        $progress = $this->markAsCompleted($lesson, $userId);
+        return $this->markAsCompleted($lesson, $userId);
+    }
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => 'Lesson marked as completed',
-            'progress' => $progress . '%'
-        ]);
+    public function allTestsPassed(Lesson $lesson, int $userId): bool
+    {
+        $testIds = $lesson->tests->pluck('id')->toArray();
+
+        if (empty($testIds)) {
+            return true;
+        }
+
+        $passedCount = TestAttempt::query()
+            ->where('user_id', $userId)
+            ->where('lesson_id', $lesson->id)
+            ->whereIn('test_id', $testIds)
+            ->where('status', 'passed')
+            ->distinct('test_id')
+            ->count('test_id');
+
+        return $passedCount >= count($testIds);
     }
 
     public function markAsCompleted(Lesson $lesson, int $userId): int
     {
-        $user = auth()->user() ?? \App\Models\User::find($userId);
+        $user = auth()->user() ?? User::findOrFail($userId);
         $course = $lesson->module->course;
         $userCourse = $user->getUserCourse($course->id);
 
-        // Фиксируем прохождение урока
+        if (!$userCourse) {
+            abort(403, 'Пользователь не записан на этот курс.');
+        }
+
         UserCourseLesson::query()->firstOrCreate([
             'user_course_id' => $userCourse->id,
             'lesson_id'      => $lesson->id,
         ]);
 
-        // Считаем прогресс курса
         $totalLessonsCount = Lesson::query()
-            ->whereHas('module', fn($q) => $q->where('course_id', $course->id))
+            ->whereHas('module', fn ($q) => $q->where('course_id', $course->id))
             ->count();
 
         $completedLessonsCount = UserCourseLesson::query()

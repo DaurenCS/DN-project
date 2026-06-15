@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Resources\TestResource;
 use App\Models\Lesson;
 use App\Models\Question;
 use App\Models\Test;
@@ -63,31 +64,30 @@ class TestService
         ]);
     }
 
-    public function getTest(Test $test, ?int $lessonId = null, int $userId): array
+    public function getTest(Test $test, int $userId, ?int $lessonId = null): TestResource
     {
-
         $attempt = $this->startTest($test, $lessonId, $userId);
         $orderedIds = $attempt->question_ids;
 
         if (empty($orderedIds)) {
-            return $this->formatTestResponse($test, $attempt, collect(), []);
+            return new TestResource($test, $attempt, collect(), []);
         }
 
         $questions = Question::query()
             ->whereIn('id', $orderedIds)
             ->with(['answers' => function ($query) {
-                $query->select('id', 'question_id', 'answer'); // Безопасно: без is_correct
+                $query->select('id', 'question_id', 'answer');
             }])
-             ->orderByRaw("position(id::text in '" . implode(',', $orderedIds) . "')") // Для PostgreSQL
-            ->get();
+            ->get()
+            ->sortBy(fn ($question) => array_search($question->id, $orderedIds))
+            ->values();
 
         $savedAnswers = DB::table('test_attempt_answers')
             ->where('test_attempt_id', $attempt->id)
             ->pluck('answer_id', 'question_id')
             ->toArray();
 
-        return $this->formatTestResponse($test, $attempt, $questions, $savedAnswers);
-
+        return new TestResource($test, $attempt, $questions, $savedAnswers);
     }
     public function saveQuestionAnswer(Test $test, int $userId, int $questionId, array $answerIds,  ?int $lessonId = null): void
     {
@@ -189,44 +189,18 @@ class TestService
         });
     }
 
-    private function formatTestResponse(Test $test, TestAttempt $attempt, $questions, array $savedAnswers): array
+    public function results(Test $test)
     {
-        return [
-            'attempt_id'    => $attempt->id,
-            'test_id'       => $test->id,
-            'title'         => $test->title,
-            'duration'      => $test->duration,
-            'time_left'     => $test->duration > 0
-                ? max(0, $attempt->created_at->addMinutes($test->duration)->diffInSeconds(now(), false) * -1)
-                : null,
-            'questions'     => $questions->map(fn($question) => [
-                'id'            => $question->id,
-                'text'          => $question->question_text,
-                'point'         => $question->point,
-                'question_type' => $question->type?->id,
-                'user_answer'   => $savedAnswers[$question->id] ?? [],
-                'answers'       => $question->answers->map(fn($answer) => [
-                    'id'   => $answer->id,
-                    'text' => $answer->answer,
-                ])
-            ]),
-        ];
+
     }
+
 
     private function autoFinishLessonIfAllTestsPassed(Lesson $lesson, int $userId): void
     {
-        $testIds = $lesson->tests->pluck('id')->toArray();
+        $lessonService = app(LessonService::class);
 
-        $passedAttemptsCount = TestAttempt::query()
-            ->where('user_id', $userId)
-            ->where('lesson_id', $lesson->id)
-            ->whereIn('test_id', $testIds)
-            ->where('status', 'passed')
-            ->distinct('test_id')
-            ->count('test_id');
-
-        if ($passedAttemptsCount >= count($testIds)) {
-            app(LessonService::class)->markAsCompleted($lesson, $userId);
+        if ($lessonService->allTestsPassed($lesson, $userId)) {
+            $lessonService->markAsCompleted($lesson, $userId);
         }
     }
 

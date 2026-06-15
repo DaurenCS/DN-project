@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [TestController::class, 'show']);
         Route::post('/questions/{question}/answer', [TestController::class, 'saveAnswer']);
         Route::post('/submit', [TestController::class, 'submit']);
+        Route::get('/results', [TestController::class, 'getResults']);
     });
 });
 Route::group(['prefix' => 'courses'], function () {
