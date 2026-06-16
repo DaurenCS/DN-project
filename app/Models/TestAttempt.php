@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TestAttempt extends Model
 {
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_PASSED = 'passed';
+    const STATUS_FAILED = 'failed';
+
     protected $fillable = [
         'user_id',
         'lesson_id',
@@ -17,10 +21,12 @@ class TestAttempt extends Model
         'attempts',
         'percent',
         'status',
-        'question_ids'
+        'question_ids',
+        'started_at',
     ];
 
-    public $casts = [
+    protected $casts = [
+        'started_at' => 'datetime',
         'question_ids' => 'array',
     ];
 

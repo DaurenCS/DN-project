@@ -61,7 +61,7 @@ class TestController extends Controller
             'lesson_id' => 'nullable|integer|exists:lessons,id',
         ]);
 
-        $attempt = $this->testService->submitTest($test, auth()->id(), $validated['lesson_id'] ?? null);
+        $attempt = $this->testService->submitTest($test, $validated['lesson_id'] ?? null);
 
         return response()->json([
             'status' => 'success',
@@ -75,8 +75,21 @@ class TestController extends Controller
         ]);
     }
 
-    public function getResults(Test $test): JsonResponse
+    public function getResults(Request $request, Test $test): JsonResponse
     {
-        $this->testService->results($test);
+        $validated = $request->validate([
+            'lesson_id' => 'nullable|integer|exists:lessons,id',
+        ]);
+
+        $data = $this->testService->results($test, $validated['lesson_id'] ?? null);
+
+        return response()->json([
+            'status' => 'success',
+            'summary' => [
+                'percent' => $data['attempt']->percent,
+                'status'  => $data['attempt']->status,
+            ],
+            'details' => $data['results']
+        ]);
     }
 }

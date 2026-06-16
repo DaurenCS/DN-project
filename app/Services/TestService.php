@@ -31,20 +31,11 @@ class TestService
 
         $query = TestAttempt::query()
             ->where('user_id', $userId)
-            ->where('test_id', $test->id)
-            ->where('status', 'in_progress');
+            ->where('test_id', $test->id);
 
         $this->applyLessonFilter($query, $lessonId ?? null);
 
-        $activeAttempt = $query->first();
-
-        if ($activeAttempt) {
-            if ($test->duration > 0 && now()->greaterThan($activeAttempt->created_at->addMinutes($test->duration))) {
-                $activeAttempt->update(['status' => 'failed']);
-            } else {
-                return $activeAttempt;
-            }
-        }
+        $existingAttempt = $query->first();
 
         $shuffledQuestionIds = Question::query()
             ->where('test_id', $test->id)
@@ -52,6 +43,29 @@ class TestService
             ->pluck('id')
             ->toArray();
 
+
+        if ($existingAttempt) {
+            if (
+                $existingAttempt->status === 'in_progress' &&
+                !($test->duration > 0 && now()->greaterThan($existingAttempt->created_at->addMinutes($test->duration)))
+            ) {
+                return $existingAttempt;
+            }
+
+            TestAttemptAnswer::where('test_attempt_id', $existingAttempt->id)->delete();
+
+            $existingAttempt->update([
+                'status'          => 'in_progress',
+                'attempts'        => $existingAttempt->attempts + 1,
+                'question_ids'    => $shuffledQuestionIds,
+                'total_questions' => count($shuffledQuestionIds),
+                'correct_answers' => 0,
+                'percent'         => 0,
+                'started_at'      => now(),
+            ]);
+
+            return $existingAttempt->fresh();
+        }
         return TestAttempt::query()->create([
             'user_id'         => $userId,
             'lesson_id'       => $lesson?->id,
@@ -60,7 +74,9 @@ class TestService
             'question_ids'    => $shuffledQuestionIds,
             'correct_answers' => 0,
             'percent'         => 0,
-            'status'          => 'in_progress',
+            'attempts'        => 1,
+            'started_at' => now(),
+            'status'          => TestAttempt::STATUS_IN_PROGRESS,
         ]);
     }
 
@@ -96,14 +112,15 @@ class TestService
             $query = TestAttempt::query()
                 ->where('user_id', $userId)
                 ->where('test_id', $test->id)
-                ->where('status', 'in_progress');
+                ->where('status', TestAttempt::STATUS_IN_PROGRESS);
 
             $this->applyLessonFilter($query, $lessonId);
 
             $attempt = $query->firstOrFail();
 
-            if ($test->duration > 0 && now()->greaterThan($attempt->created_at->addMinutes($test->duration))) {
-                $attempt->update(['status' => 'failed']);
+            $startTime = $attempt->started_at ?? $attempt->created_at;
+            if ($test->duration > 0 && now()->greaterThan($startTime->addMinutes($test->duration))) {
+                $attempt->update(['status' => TestAttempt::STATUS_FAILED]);
                 abort(403, 'Время на прохождение теста истекло.');
             }
 
@@ -123,22 +140,25 @@ class TestService
             }
         });
     }
-    public function submitTest(Test $test, int $userId, ?int $lessonId = null): TestAttempt
+    public function submitTest(Test $test, ?int $lessonId = null): TestAttempt
     {
+        $userId = auth()->id();
+
         return DB::transaction(function () use ($test, $userId, $lessonId) {
             $lesson = $lessonId ? Lesson::query()->findOrFail($lessonId) : null;
 
             $query = TestAttempt::query()
                 ->where('user_id', $userId)
                 ->where('test_id', $test->id)
-                ->where('status', 'in_progress');
+                ->where('status', TestAttempt::STATUS_IN_PROGRESS);
 
             $this->applyLessonFilter($query, $lessonId);
 
             $attempt = $query->firstOrFail();
 
-            if ($test->duration > 0 && now()->greaterThan($attempt->created_at->addMinutes($test->duration))) {
-                $attempt->update(['status' => 'failed']);
+            $startTime = $attempt->started_at ?? $attempt->created_at;
+            if ($test->duration > 0 && now()->greaterThan($startTime->addMinutes($test->duration))) {
+                $attempt->update(['status' => TestAttempt::STATUS_FAILED]);
                 return $attempt;
             }
 
@@ -172,7 +192,7 @@ class TestService
             }
 
             $percent = $totalQuestions > 0 ? round(($correctCount / $totalQuestions) * 100) : 0;
-            $status = $percent >= $test->passing_score ? 'passed' : 'failed';
+            $status = $percent >= $test->passing_score ? TestAttempt::STATUS_PASSED : TestAttempt::STATUS_FAILED;
 
             $attempt->update([
                 'total_questions' => $totalQuestions,
@@ -181,7 +201,7 @@ class TestService
                 'status'          => $status,
             ]);
 
-            if ($status === 'passed' && $lesson) {
+            if ($status === TestAttempt::STATUS_PASSED && $lesson) {
                 $this->autoFinishLessonIfAllTestsPassed($lesson, $userId);
             }
 
@@ -189,8 +209,53 @@ class TestService
         });
     }
 
-    public function results(Test $test)
+    public function results(Test $test, ?int $lessonId = null)
     {
+        $testAttempt = TestAttempt::query()
+            ->where('user_id', auth()->id())
+            ->where('test_id', $test->id)
+            ->where('lesson_id', $lessonId)
+            ->whereNot('status', TestAttempt::STATUS_IN_PROGRESS)
+            ->firstOrFail();
+
+        $questionIds = $testAttempt->question_ids;
+
+        $questions = $test->questions()
+            ->with(['answers:id,question_id,answer,is_correct'])
+            ->get()
+            ->sortBy(fn($q) => array_search($q->id, $questionIds))
+            ->values();
+
+        $userAnswers = TestAttemptAnswer::query()
+            ->where('test_attempt_id', $testAttempt->id)
+            ->get()
+            ->groupBy('question_id')
+            ->map(fn($items) => $items->pluck('answer_id')->toArray());
+
+        $results = $questions->map(function ($question) use ($userAnswers) {
+            $submittedIds = $userAnswers[$question->id] ?? [];
+            $correctIds = $question->answers->where('is_correct', true)->pluck('id')->toArray();
+
+            sort($submittedIds);
+            sort($correctIds);
+
+            return [
+                'question_id' => $question->id,
+                'text'        => $question->question_text,
+                'submitted'   => $submittedIds,
+                'is_correct'  => $submittedIds === $correctIds,
+                'answers'     => $question->answers->map(fn($a) => [
+                    'id' => $a->id,
+                    'text' => $a->answer,
+                    'is_correct' => (bool)$a->is_correct
+                ])
+            ];
+        });
+
+        return [
+            'attempt' => $testAttempt,
+            'results' => $results
+        ];
 
     }
 

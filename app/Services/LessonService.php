@@ -18,7 +18,7 @@ class LessonService
         $lesson = Lesson::query()
             ->with(['module.course', 'videos', 'conspects', 'tests' => function ($query) use ($userId) {
                 $query->with(['attempts' => function ($q) use ($userId) {
-                    $q->where('user_id', $userId)->where('status', 'passed');
+                    $q->where('user_id', $userId)->where('status', TestAttempt::STATUS_PASSED);
                 }]);
             }])
             ->where('slug', $slug)
@@ -42,7 +42,7 @@ class LessonService
         $lesson->setAttribute('next', $next);
 
         $lesson->tests->each(function ($test) {
-            $test->setAttribute('passed', $test->attempts->isNotEmpty());
+            $test->setAttribute(TestAttempt::STATUS_PASSED, $test->attempts->isNotEmpty());
         });
 
         return LessonResource::make($lesson);
@@ -78,7 +78,7 @@ class LessonService
             ->where('user_id', $userId)
             ->where('lesson_id', $lesson->id)
             ->whereIn('test_id', $testIds)
-            ->where('status', 'passed')
+            ->where('status', TestAttempt::STATUS_PASSED)
             ->distinct('test_id')
             ->count('test_id');
 

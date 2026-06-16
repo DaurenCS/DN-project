@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\TestAttempt;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,7 @@ return new class extends Migration
             $table->integer('total_questions')->default(0);
             $table->integer('correct_answers')->default(0);
             $table->integer('percent')->default(0);
-            $table->string('status')->default('in_progress');
+            $table->string('status')->default(TestAttempt::STATUS_IN_PROGRESS);
             $table->timestamps();
         });
     }
