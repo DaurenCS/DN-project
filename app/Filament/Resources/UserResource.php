@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Enum\Role;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
+use App\Models\Department;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -60,8 +61,14 @@ class UserResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('position')
                             ->label('Должность'),
-                        Forms\Components\TextInput::make('department')
-                            ->label('Подразделение'),
+                        Forms\Components\Select::make('department_id')
+                            ->relationship('department', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->createOptionForm([
+                                Forms\Components\TextInput::make('name')->required(),
+                            ])
+                            ->createOptionUsing(fn (array $data) => Department::create($data)->id),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Доступ и Роли')
@@ -93,9 +100,10 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('department')
+                Tables\Columns\TextColumn::make('department.name')
                     ->label('Подразделение')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('position')
                     ->label('Должность'),
                 Tables\Columns\IconColumn::make('is_active')
@@ -110,8 +118,8 @@ class UserResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Активность'),
                 Tables\Filters\SelectFilter::make('department')
-                    ->label('Подразделение')
-                    ->options(fn() => User::distinct()->pluck('department', 'department')->filter()->toArray()),
+                    ->relationship('department', 'name')
+                    ->label('Подразделение'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

@@ -30,7 +30,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'phone',
         'position',
-        'department',
+        'department_id',
         'is_active',
         'last_login_at',
     ];
@@ -77,5 +77,10 @@ class User extends Authenticatable implements FilamentUser
             ->where('user_id', $this->id)
             ->where('course_id', $courseId)
             ->first();
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 }
