@@ -100,7 +100,11 @@ class TestService
 
         $savedAnswers = DB::table('test_attempt_answers')
             ->where('test_attempt_id', $attempt->id)
-            ->pluck('answer_id', 'question_id')
+            ->get()
+            ->groupBy('question_id')
+            ->map(function ($items) {
+                return $items->pluck('answer_id')->toArray();
+            })
             ->toArray();
 
         return new TestResource($test, $attempt, $questions, $savedAnswers);
