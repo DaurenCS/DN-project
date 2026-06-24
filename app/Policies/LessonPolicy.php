@@ -15,7 +15,6 @@ class LessonPolicy
     public function access(User $user, Lesson $lesson): Response
     {
         $course = $lesson->module?->course;
-
         if (!$course) {
             return Response::deny('Данный урок не принадлежит ни одному курсу.');
         }

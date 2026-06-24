@@ -25,7 +25,8 @@ class TestResource extends JsonResource
             'attempt_id' => $this->attempt->id,
             'test_id'    => $this->test->id,
             'title'      => $this->test->title,
-            'duration'   => $this->test->duration,
+            'lesson_id'  => $this->attempt->lesson_id ?? null,
+            'expired_at' => $this->resolveExpiredAt(),
             'time_left'  => $this->resolveTimeLeft(),
             'questions'  => QuestionResource::collection(
                 $this->questions->map(function ($question) {
@@ -49,5 +50,14 @@ class TestResource extends JsonResource
         $expiresAt = $this->attempt->created_at->addMinutes($this->test->duration);
 
         return max(0, $expiresAt->getTimestamp() - now()->getTimestamp());
+    }
+    private function resolveExpiredAt(): ?string
+    {
+        if ($this->test->duration <= 0) {
+            return null;
+        }
+
+        // Рассчитываем точное время истечения
+        return $this->attempt->started_at->addMinutes($this->test->duration)->toIso8601String();
     }
 }

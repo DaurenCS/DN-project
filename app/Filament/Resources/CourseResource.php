@@ -22,6 +22,11 @@ class CourseResource extends Resource
     protected static ?string $modelLabel = 'Курс';
     protected static ?string $pluralModelLabel = 'Курсы';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['admin', 'curator']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([

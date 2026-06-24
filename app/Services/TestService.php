@@ -25,9 +25,7 @@ class TestService
     {
         $lesson = $lessonId ? Lesson::query()->findOrFail($lessonId) : null;
 
-        if ($lesson) {
-            Gate::authorize('access', $lesson);
-        }
+        Gate::authorize('view', [$test, $lesson]);
 
         $query = TestAttempt::query()
             ->where('user_id', $userId)
@@ -47,7 +45,7 @@ class TestService
         if ($existingAttempt) {
             if (
                 $existingAttempt->status === 'in_progress' &&
-                !($test->duration > 0 && now()->greaterThan($existingAttempt->created_at->addMinutes($test->duration)))
+                !($test->duration > 0 && now()->greaterThan($existingAttempt->started_at->addMinutes($test->duration)))
             ) {
                 return $existingAttempt;
             }

@@ -66,9 +66,19 @@ class User extends Authenticatable implements FilamentUser
             ->withTimestamps();
     }
 
-    public function canAccessPanel(Panel $panel): bool
+    public function canAccessPanel(\Filament\Panel $panel): bool
     {
-        return $this->is_active && $this->hasAnyRole(['admin']);
+        // Админ имеет доступ везде
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        // Куратор имеет доступ только в свою панель
+        if ($panel->getId() === 'curator' && $this->hasRole('curator')) {
+            return true;
+        }
+
+        return false;
     }
 
     public function getUserCourse(int $courseId): ?object
@@ -83,4 +93,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->belongsTo(Department::class);
     }
+
+
+
 }

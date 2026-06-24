@@ -35,9 +35,21 @@ class EmployeesRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('ФИО'),
-                Tables\Columns\TextColumn::make('email')->label('Email'),
-                Tables\Columns\TextColumn::make('position')->label('Должность'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('ФИО')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Email'),
+
+                Tables\Columns\TextColumn::make('position')
+                    ->label('Должность'),
+
+                Tables\Columns\TextColumn::make('courses.name')
+                    ->label('Назначенные курсы')
+                    ->badge()
+                    ->placeholder('Курсы не назначены')
+                    ->color('primary'),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('attach')
@@ -51,7 +63,6 @@ class EmployeesRelationManager extends RelationManager
                             ->required(),
                     ])
                     ->action(function (array $data, $livewire): void {
-                        // $livewire->ownerRecord - это текущий объект Департамента
                         $user = User::find($data['user_id']);
                         $user->update(['department_id' => $livewire->ownerRecord->id]);
                     }),
@@ -70,11 +81,10 @@ class EmployeesRelationManager extends RelationManager
                         $employees = $livewire->ownerRecord->employees;
 
                         foreach ($employees as $employee) {
-                            // Прикрепляем курс, оставляя старт пустым
                             $employee->courses()->syncWithoutDetaching([
                                 $data['course_id'] => [
                                     'progress' => 0,
-                                    'start_date' => null, // Явно указываем null или просто не передаем его
+                                    'start_date' => null,
                                 ]
                             ]);
                         }
