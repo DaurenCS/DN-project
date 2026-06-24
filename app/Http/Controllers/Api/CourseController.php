@@ -33,6 +33,12 @@ class CourseController extends Controller
         return $this->courseService->start($slug);
     }
 
+    public function finish($slug)
+    {
+        return $this->courseService->finish($slug);
+
+    }
+
     public function buy($slug)
     {
         return null;

@@ -112,8 +112,6 @@ class CourseResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Обложка')
-                    ->disk('public') // Указываем диск явно
-                    ->visibility('public')
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('name')

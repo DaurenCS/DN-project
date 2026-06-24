@@ -84,4 +84,14 @@ class CourseService
         return response()->json(['message' => 'Course started'], 200);
 
     }
+
+    public function finish($slug)
+    {
+        $user = auth()->user();
+        $course = Course::query()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+
+    }
 }
