@@ -3,44 +3,53 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GetCoursesRequest;
 use App\Services\CourseService;
+use App\Http\Resources\CourseResource;
+use App\Http\Resources\CourseDetailResource;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
-    public function __construct(CourseService $courseService)
-    {
-        $this->courseService = $courseService;
-    }
+    public function __construct(private CourseService $courseService) {}
 
-    public function getCourseList(Request $request)
+    public function getCourseList(GetCoursesRequest $request)
     {
-        return $this->courseService->getCourses($request);
+        $courses = $this->courseService->getCourses($request->validated('per_page', 10));
+
+        return CourseResource::collection($courses);
     }
 
     public function getCourse($slug)
     {
-        return $this->courseService->getCourse($slug);
+        $course = $this->courseService->getCourse($slug);
+
+        return CourseDetailResource::make($course);
     }
 
-    public function getUserCourses()
+    public function getUserCourses(Request $request)
     {
-        return $this->courseService->getUserCourses();
+        $courses = $this->courseService->getUserCourses($request->user());
+
+        return CourseResource::collection($courses);
     }
 
-    public function start($slug)
+    public function start(Request $request, $slug)
     {
-        return $this->courseService->start($slug);
+        $this->courseService->start($request->user(), $slug);
+
+        return response()->json(['message' => 'Курс успешно начат']);
     }
 
-    public function finish($slug)
+    public function finish(Request $request, $slug)
     {
-        return $this->courseService->finish($slug);
+        $this->courseService->finish($request->user(), $slug);
 
+        return response()->json(['message' => 'Курс успешно завершен']);
     }
 
     public function buy($slug)
     {
-        return null;
+        return response()->json(['message' => 'В разработке'], 501);
     }
 }

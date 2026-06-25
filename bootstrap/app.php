@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,5 +20,18 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (\Throwable $e, $request) {
+            if ($request->is('api/*')) {
+                if ($e instanceof ModelNotFoundException) {
+                    return response()->json(['message' => 'Ресурс не найден'], 404);
+                }
+                $statusCode = method_exists($e, 'getStatusCode')
+                    ? $e->getStatusCode()
+                    : (($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500);
+
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'Произошла ошибка сервера',
+                ], $statusCode);
+            }
+        });
     })->create();

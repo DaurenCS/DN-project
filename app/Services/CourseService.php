@@ -2,41 +2,26 @@
 
 namespace App\Services;
 
-use App\Http\Resources\CourseDetailResource;
-use App\Http\Resources\CourseResource;
 use App\Models\Course;
+use App\Models\User;
 use App\Models\UserCourse;
-use App\Models\UserCourseLesson;
-use Illuminate\Http\Request;
+use Exception;
 
 class CourseService
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct()
+    public function getCourses(int $perPage = 10)
     {
-        //
-    }
-
-    public function getCourses(Request $request)
-    {
-        $perPage = $request->query('perPage', 10);
-
-        $courses = Course::query()
+        return Course::query()
             ->withCount(['modules', 'lessons'])
             ->where('is_active', true)
             ->withAuthUserProgress()
             ->orderBy('id', 'desc')
             ->paginate($perPage);
-
-
-        return CourseResource::collection($courses);
     }
 
-    public function getCourse($slug)
+    public function getCourse(string $slug): Course
     {
-        $course = Course::query()
+        return Course::query()
             ->withAuthUserProgress()
             ->where('slug', $slug)
             ->where('is_active', true)
@@ -45,53 +30,57 @@ class CourseService
                 $query->withExists('currentAuthProgress');
             }])
             ->firstOrFail();
-
-        return CourseDetailResource::make($course);
-
     }
-    public function getUserCourses()
+
+    public function getUserCourses(User $user)
     {
-        $user = auth()->user();
-        $courses = $user->courses()
+        return $user->courses()
             ->where('is_active', true)
             ->withCount(['modules', 'lessons'])
             ->get();
-
-        return CourseResource::collection($courses);
-
     }
 
-    public function start($slug)
+    public function start(User $user, string $slug): void
     {
-        $user = auth()->user();
-        $course = Course::query()
-            ->where('slug', $slug)
-            ->firstOrFail();
+        $course = Course::query()->where('slug', $slug)->firstOrFail();
 
         $userCourse = UserCourse::query()
             ->where('course_id', $course->id)
             ->where('user_id', $user->id)
-            ->firstOrFail();
+            ->first();
+
+        if (!$userCourse) {
+            throw new Exception('Вы не записаны на этот курс', 403);
+        }
 
         if ($userCourse->start_date) {
-            return response()->json(['message' => 'Course already started'], 400);
+            throw new Exception('Курс уже начат', 400);
         }
 
         $userCourse->update([
             'start_date' => now(),
         ]);
-
-        return response()->json(['message' => 'Course started'], 200);
-
     }
 
-    public function finish($slug)
+    public function finish(User $user, string $slug): void
     {
-        $user = auth()->user();
-        $course = Course::query()
-            ->where('slug', $slug)
+        $course = Course::query()->where('slug', $slug)->firstOrFail();
+
+        $this->completeCourse($user, $course);
+    }
+
+    public function completeCourse(User $user, Course $course): void
+    {
+        $userCourse = UserCourse::where('user_id', $user->id)
+            ->where('course_id', $course->id)
             ->firstOrFail();
 
+        if ($userCourse->progress < 100) {
+            throw new Exception('Курс еще не пройден полностью.', 400);
+        }
 
+        $userCourse->update([
+            'end_date' => now()
+        ]);
     }
 }
