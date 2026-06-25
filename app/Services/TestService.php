@@ -96,14 +96,18 @@ class TestService
             ->sortBy(fn ($question) => array_search($question->id, $orderedIds))
             ->values();
 
-        $savedAnswers = DB::table('test_attempt_answers')
+        $savedAnswerIds = DB::table('test_attempt_answers')
             ->where('test_attempt_id', $attempt->id)
             ->get()
             ->groupBy('question_id')
-            ->map(function ($items) {
-                return $items->pluck('answer_id')->toArray();
-            })
+            ->map(fn($items) => $items->pluck('answer_id')->toArray())
             ->toArray();
+
+        $savedAnswers = $questions->mapWithKeys(function ($question) use ($savedAnswerIds) {
+            $ids = $savedAnswerIds[$question->id] ?? [];
+            $answers = $question->answers->whereIn('id', $ids)->values();
+            return [$question->id => $answers];
+        });
 
         return new TestResource($test, $attempt, $questions, $savedAnswers);
     }

@@ -14,7 +14,8 @@ class QuestionResource extends JsonResource
             'text'          => $this->question_text,
             'point'         => $this->point,
             'question_type' => $this->type?->id,
-            'user_answer'   => $this->user_answer ?? [],
+            'answered'      => collect($this->user_answer)->isNotEmpty(),
+            'user_answer'   => AnswerResource::collection($this->user_answer ?? collect()),
             'answers'       => AnswerResource::collection($this->answers),
         ];
     }

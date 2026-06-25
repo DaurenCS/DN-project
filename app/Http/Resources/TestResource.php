@@ -14,18 +14,24 @@ class TestResource extends JsonResource
         private Test $test,
         private TestAttempt $attempt,
         private Collection $questions,
-        private array $savedAnswers,
+        private Collection $savedAnswers, // было array
     ) {
         parent::__construct($attempt);
     }
 
     public function toArray(Request $request): array
     {
+        $lesson = $this->attempt->lesson;
+
         return [
             'attempt_id' => $this->attempt->id,
             'test_id'    => $this->test->id,
             'title'      => $this->test->title,
-            'lesson_id'  => $this->attempt->lesson_id ?? null,
+            'lesson'  => [
+                'id' => $lesson->id,
+                'name' => $lesson->name,
+                'slug' => $lesson->slug,
+            ],
             'expired_at' => $this->resolveExpiredAt(),
             'time_left'  => $this->resolveTimeLeft(),
             'questions'  => QuestionResource::collection(
