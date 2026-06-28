@@ -72,5 +72,11 @@ class Course extends Model
 
     }
 
+    public function certificates() {
+        return $this->belongsToMany(Certificate::class, 'course_certificate')
+            ->withPivot('id')
+            ->withTimestamps();
+    }
+
 
 }

@@ -43,5 +43,6 @@ Route::group(['prefix' => 'courses'], function () {
         Route::post('{slug}/start', [CourseController::class, 'start']);
         Route::post('{slug}/buy', [CourseController::class, 'buy']);
         Route::post('{slug}/finish', [CourseController::class, 'finish']);
+        Route::post('{slug}/get-certificate', [CourseController::class, 'generateCertificate']);
     });
 });

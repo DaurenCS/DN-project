@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Interfaces\CertificateGeneratorInterface;
+use App\Interfaces\DocumentGeneratorInterface;
+use App\Services\CertificateService;
+use App\Services\WordDocumentGenerator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +15,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            CertificateGeneratorInterface::class, CertificateService::class
+        );
+        $this->app->bind(
+            DocumentGeneratorInterface::class, WordDocumentGenerator::class
+        );
     }
 
     /**

@@ -75,7 +75,7 @@ class CourseService
             ->where('course_id', $course->id)
             ->firstOrFail();
 
-        if ($userCourse->progress < 100) {
+        if ($userCourse->progress <= 100) {
             throw new Exception('Курс еще не пройден полностью.', 400);
         }
 
