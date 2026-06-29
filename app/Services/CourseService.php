@@ -59,6 +59,7 @@ class CourseService
 
         $userCourse->update([
             'start_date' => now(),
+            'status' => 'continue',
         ]);
     }
 
@@ -66,21 +67,24 @@ class CourseService
     {
         $course = Course::query()->where('slug', $slug)->firstOrFail();
 
-        $this->completeCourse($user, $course);
-    }
-
-    public function completeCourse(User $user, Course $course): void
-    {
         $userCourse = UserCourse::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->firstOrFail();
 
-        if ($userCourse->progress <= 100) {
+
+        $this->completeCourse($userCourse);
+    }
+
+    public function completeCourse(UserCourse $userCourse): void
+    {
+
+        if ($userCourse->progress < 100) {
             throw new Exception('Курс еще не пройден полностью.', 400);
         }
 
         $userCourse->update([
-            'end_date' => now()
+            'end_date' => now(),
+            'status' => 'completed',
         ]);
     }
 }

@@ -42,8 +42,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('certificates');
-        Schema::dropIfExists('course_certificate');
         Schema::dropIfExists('user_certificate');
+        Schema::dropIfExists('course_certificate');
+        Schema::dropIfExists('certificates');
     }
 };

@@ -7,6 +7,7 @@ use App\Interfaces\DocumentGeneratorInterface;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCertificate;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -25,6 +26,17 @@ class CertificateService implements CertificateGeneratorInterface
             ->with('certificates')
             ->where('slug', $courseSlug)
             ->firstOrFail();
+
+        $userCourse = $user->getUserCourse($course->id);
+
+        if (!$userCourse) {
+            abort(403, 'Пользователь не записан на этот курс.');
+        }
+
+        if ($userCourse->status != 'completed') {
+            abort(403, 'Курс не завершен.');
+
+        }
 
         $template = $course->certificates->first();
 

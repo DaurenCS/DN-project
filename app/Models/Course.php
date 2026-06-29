@@ -57,7 +57,7 @@ class Course extends Model
     {
         return $this->belongsToMany(User::class, 'user_course')
             ->using(UserCourse::class)
-            ->withPivot(['id','start_date', 'end_date', 'progress'])
+            ->withPivot(['id','start_date', 'end_date', 'progress', 'status'])
             ->withTimestamps();
     }
 

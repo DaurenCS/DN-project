@@ -25,7 +25,7 @@ class CourseResource extends JsonResource
             'is_active' => (bool)$this->is_active,
 
             'user_progress' => $userProgress,
-            'user_status' => $this->getUserStatus($userProgress),
+            'user_status' => $userProgress ? $userProgress['status'] : 'buy',
 
             'modules_count' => $this->whenCounted('modules'),
             'lessons_count' => $this->whenCounted('lessons'),
@@ -41,6 +41,7 @@ class CourseResource extends JsonResource
                 'start_date'              => $this->pivot->start_date,
                 'progress' => (int) $this->pivot->progress,
                 'completed_at'        => $this->pivot->end_date,
+                'status' => $this->pivot->status,
             ];
         }
 
@@ -51,26 +52,11 @@ class CourseResource extends JsonResource
                 'start_date'              => $pivot->start_date,
                 'progress' => (int) $pivot->progress,
                 'completed_at'        => $pivot->end_date,
+                'status' => $pivot->status,
             ];
         }
 
         return null;
     }
 
-    protected function getUserStatus($userProgress)
-    {
-        if (is_null($userProgress)) {
-            return 'buy';
-        }
-
-        if (!empty($userProgress['completed_at'])) {
-            return 'completed';
-        }
-
-        if (!empty($userProgress['start_date'])) {
-            return 'continue';
-        }
-        return 'start';
-
-    }
 }

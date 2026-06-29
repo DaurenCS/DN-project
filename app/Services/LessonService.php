@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 class LessonService
 {
+    public function __construct(protected CourseService $courseService) {}
     public function getLesson(string $slug): LessonResource
     {
         $userId = auth()->id();
@@ -114,6 +115,14 @@ class LessonService
 
         $userCourse->progress = $progress;
         $userCourse->save();
+
+        if ($progress >= 100) {
+            try {
+                $this->courseService->completeCourse($userCourse);
+            } catch (\Exception $e) {
+
+            }
+        }
 
         return $progress;
     }
