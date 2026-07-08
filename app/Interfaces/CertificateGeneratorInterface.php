@@ -8,4 +8,6 @@ use App\Models\UserCertificate;
 interface CertificateGeneratorInterface
 {
     public function issueCertificateForCourse(User $user, string $courseSlug): UserCertificate;
+
+    public function getUserCertificates(User $user);
 }

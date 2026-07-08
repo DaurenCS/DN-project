@@ -6,11 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserCertificate extends Model
 {
+    protected $table = 'user_certificate';
+
     protected $fillable = [
         'user_id',
         'course_certificate_id',
         'file_path',
         'expires_at',
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
     ];
 
     public function courseCertificate() {

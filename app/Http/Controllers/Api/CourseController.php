@@ -9,10 +9,11 @@ use App\Services\CourseService;
 use App\Http\Resources\CourseResource;
 use App\Http\Resources\CourseDetailResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
-    public function __construct(private CourseService $courseService, private CertificateGeneratorInterface $certificateGenerator) {}
+    public function __construct(private CourseService $courseService) {}
 
     public function getCourseList(GetCoursesRequest $request)
     {
@@ -47,16 +48,6 @@ class CourseController extends Controller
         $this->courseService->finish($request->user(), $slug);
 
         return response()->json(['message' => 'Курс успешно завершен']);
-    }
-
-    public function generateCertificate(Request $request, $slug)
-    {
-        $filePath = $this->certificateGenerator->issueCertificateForCourse($request->user(), $slug);
-
-        return response()->download($filePath, "Certificate.docx")
-            ->deleteFileAfterSend(true);
-
-
     }
 
     public function buy($slug)
