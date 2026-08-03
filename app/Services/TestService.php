@@ -218,6 +218,7 @@ class TestService
     public function results(Test $test, ?int $lessonId = null)
     {
         $testAttempt = TestAttempt::query()
+            ->with(['lesson.module.course','test'])
             ->where('user_id', auth()->id())
             ->where('test_id', $test->id)
             ->where('lesson_id', $lessonId)
@@ -238,13 +239,16 @@ class TestService
             ->groupBy('question_id')
             ->map(fn($items) => $items->pluck('answer_id')->toArray());
 
-        $results = $questions->map(function ($question) use ($userAnswers) {
+        $results = $questions->map(function ($question) use ($userAnswers, $testAttempt) {
             $submittedIds = $userAnswers[$question->id] ?? [];
             $correctIds = $question->answers->where('is_correct', true)->pluck('id')->toArray();
 
             sort($submittedIds);
             sort($correctIds);
 
+            $test = $testAttempt->test;
+            $lesson = $testAttempt->lesson;
+            $course =  $testAttempt->lesson->module->course;
             return [
                 'question_id' => $question->id,
                 'text'        => $question->question_text,
@@ -254,7 +258,22 @@ class TestService
                     'id' => $a->id,
                     'text' => $a->answer,
                     'is_correct' => (bool)$a->is_correct
-                ])
+                ]),
+                'test' => [
+                    'id' => $test->id,
+                    'name' => $test->title,
+                ],
+                'lesson' => [
+                    'id' => $lesson->id,
+                    'name' => $lesson->name,
+                    'slug' => $lesson->slug,
+                ],
+                'course' => [
+                    'id' => $course->id,
+                    'name' => $course->name,
+                    'slug' => $course->slug,
+                ]
+
             ];
         });
 
