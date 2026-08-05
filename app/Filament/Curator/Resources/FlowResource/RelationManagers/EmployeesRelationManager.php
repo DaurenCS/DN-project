@@ -98,6 +98,8 @@ class EmployeesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->options(fn () => Course::query()->pluck('name', 'id'))
+                    // Автоматически выбирает ID первого курса из таблицы
+                    ->default(fn () => Course::query()->value('id'))
                     ->query(function ($query, array $data) {
                         if (blank($data['value'])) {
                             return $query;

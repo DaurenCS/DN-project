@@ -27,14 +27,7 @@ class FlowResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('name')
-                ->label('Название')
-                ->required()
-                ->disabled()
-                ->maxLength(255),
-
-        ]);
+        return $form->schema([]);
     }
 
     public static function table(Table $table): Table
@@ -60,12 +53,9 @@ class FlowResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-            ])
-            ->actions([
-            ])
-            ->bulkActions([
-            ])
+            ->recordUrl(
+                fn ($record) => Pages\ViewFlow::getUrl(['record' => $record])
+            )
             ->defaultSort('name');
     }
 
@@ -82,6 +72,7 @@ class FlowResource extends Resource
             'index'  => Pages\ListFlows::route('/'),
             'create' => Pages\CreateFlow::route('/create'),
             'edit'   => Pages\EditFlow::route('/{record}/edit'),
+            'view'  => Pages\ViewFlow::route('/{record}'),
         ];
     }
 }
