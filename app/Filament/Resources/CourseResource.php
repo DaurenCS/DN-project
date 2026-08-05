@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CourseResource\Pages;
+use App\Filament\Resources\CourseResource\RelationManagers\CertificatesRelationManager;
 use App\Filament\Resources\CourseResource\RelationManagers\ModuleRelationManager;
 use App\Models\Course;
 use App\Models\CourseType;
@@ -181,6 +182,7 @@ class CourseResource extends Resource
     {
         return [
             ModuleRelationManager::class,
+            CertificatesRelationManager::class,
         ];
     }
 
