@@ -89,7 +89,8 @@ class TestController extends Controller
                 'percent' => $data['attempt']->percent,
                 'status'  => $data['attempt']->status,
             ],
-            'details' => $data['results']
+            'details' => $data['results'],
+            'meta' => $data['meta'],
         ]);
     }
 }

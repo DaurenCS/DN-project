@@ -245,10 +245,6 @@ class TestService
 
             sort($submittedIds);
             sort($correctIds);
-
-            $test = $testAttempt->test;
-            $lesson = $testAttempt->lesson;
-            $course =  $testAttempt->lesson->module->course;
             return [
                 'question_id' => $question->id,
                 'text'        => $question->question_text,
@@ -259,27 +255,33 @@ class TestService
                     'text' => $a->answer,
                     'is_correct' => (bool)$a->is_correct
                 ]),
-                'test' => [
-                    'id' => $test->id,
-                    'name' => $test->title,
-                ],
-                'lesson' => [
-                    'id' => $lesson->id,
-                    'name' => $lesson->name,
-                    'slug' => $lesson->slug,
-                ],
-                'course' => [
-                    'id' => $course->id,
-                    'name' => $course->name,
-                    'slug' => $course->slug,
-                ]
-
             ];
         });
+        $test = $testAttempt->test;
+        $lesson = $testAttempt->lesson;
+        $course =  $testAttempt->lesson->module->course;
+
+        $meta = [
+            'test' => [
+                'id' => $test->id,
+                'name' => $test->title,
+            ],
+            'lesson' => [
+                'id' => $lesson->id,
+                'name' => $lesson->name,
+                'slug' => $lesson->slug,
+            ],
+            'course' => [
+                'id' => $course->id,
+                'name' => $course->name,
+                'slug' => $course->slug,
+            ]
+        ];
 
         return [
             'attempt' => $testAttempt,
-            'results' => $results
+            'results' => $results,
+            'meta' => $meta,
         ];
 
     }
