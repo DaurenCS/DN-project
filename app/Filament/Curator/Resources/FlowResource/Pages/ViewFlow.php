@@ -20,5 +20,6 @@ class ViewFlow extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [];
+
     }
 }

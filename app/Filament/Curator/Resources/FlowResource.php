@@ -69,6 +69,7 @@ class FlowResource extends Resource
     public static function getPages(): array
     {
         return [
+
             'index'  => Pages\ListFlows::route('/'),
             'create' => Pages\CreateFlow::route('/create'),
             'edit'   => Pages\EditFlow::route('/{record}/edit'),

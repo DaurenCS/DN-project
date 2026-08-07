@@ -13,6 +13,7 @@ class EmployeesRelationManager extends RelationManager
     protected static string $relationship = 'employees';
 
     protected static ?string $title = 'Сотрудники';
+
     protected static ?string $modelLabel = 'Сотрудник';
     protected static ?string $pluralModelLabel = 'Сотрудники';
 
