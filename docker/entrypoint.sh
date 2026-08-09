@@ -26,6 +26,20 @@ php artisan view:cache
 echo "==> Creating storage link..."
 php artisan storage:link || true
 
+echo "==> Fixing storage and cache permissions..."
+# Обязательно создаем структуру папок
+mkdir -p /var/www/html/storage/app/public \
+         /var/www/html/storage/app/livewire-tmp \
+         /var/www/html/storage/framework/cache \
+         /var/www/html/storage/framework/sessions \
+         /var/www/html/storage/framework/views \
+         /var/www/html/storage/logs \
+         /var/www/html/bootstrap/cache
+
+# Выдаем права пользователю www-data, под которым работает php-fpm
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 echo "==> Starting PHP-FPM..."
 php-fpm -D
 
