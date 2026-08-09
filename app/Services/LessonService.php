@@ -2,26 +2,35 @@
 
 namespace App\Services;
 
-use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use App\Models\TestAttempt;
 use App\Models\User;
 use App\Models\UserCourseLesson;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class LessonService
 {
     public function __construct(protected CourseService $courseService) {}
-    public function getLesson(string $slug): LessonResource
+
+    public function getLesson(string $slug): Lesson
     {
         $userId = auth()->id();
 
         $lesson = Lesson::query()
-            ->with(['module.course', 'videos', 'conspects', 'tests' => function ($query) use ($userId) {
-                $query->with(['attempts' => function ($q) use ($userId) {
-                    $q->where('user_id', $userId)->where('status', TestAttempt::STATUS_PASSED);
-                }]);
-            }])
+            ->with([
+                'module.course',
+                'videos',
+                'conspects',
+                'tests' => function ($query) use ($userId) {
+                    $query->with(['attempts' => function ($q) use ($userId) {
+                        $q->where('user_id', $userId)
+                            ->where('status', TestAttempt::STATUS_PASSED);
+                    }]);
+                },
+            ])
             ->where('slug', $slug)
             ->firstOr(function () {
                 abort(404, 'Урок не найден');
@@ -29,60 +38,32 @@ class LessonService
 
         Gate::authorize('access', $lesson);
 
-        $courseId = $lesson->module->course_id;
-        $currentModuleOrder = $lesson->module->order;
-        $currentLessonOrder = $lesson->sort_order;
-
-        $previous = Lesson::query()
-            ->select('lessons.slug')
-            ->join('modules', 'modules.id', '=', 'lessons.module_id')
-            ->where('modules.course_id', $courseId)
-            ->where(function ($query) use ($currentModuleOrder, $currentLessonOrder) {
-                $query->where('modules.order', '<', $currentModuleOrder)
-                    ->orWhere(function ($q) use ($currentModuleOrder, $currentLessonOrder) {
-                        $q->where('modules.order', '=', $currentModuleOrder)
-                            ->where('lessons.sort_order', '<', $currentLessonOrder);
-                    });
-            })
-            ->orderBy('modules.order', 'desc')
-            ->orderBy('lessons.sort_order', 'desc')
-            ->value('lessons.slug');
-
-        $next = Lesson::query()
-            ->select('lessons.slug')
-            ->join('modules', 'modules.id', '=', 'lessons.module_id')
-            ->where('modules.course_id', $courseId)
-            ->where(function ($query) use ($currentModuleOrder, $currentLessonOrder) {
-                $query->where('modules.order', '>', $currentModuleOrder)
-                    ->orWhere(function ($q) use ($currentModuleOrder, $currentLessonOrder) {
-                        $q->where('modules.order', '=', $currentModuleOrder)
-                            ->where('lessons.sort_order', '>', $currentLessonOrder);
-                    });
-            })
-            ->orderBy('modules.order', 'asc')
-            ->orderBy('lessons.sort_order', 'asc')
-            ->value('lessons.slug');
-
-        $lesson->setAttribute('previous', $previous);
-        $lesson->setAttribute('next', $next);
+        $lesson->setAttribute('previous', $this->findAdjacentLessonSlug($lesson, 'previous'));
+        $lesson->setAttribute('next', $this->findAdjacentLessonSlug($lesson, 'next'));
 
         $lesson->tests->each(function ($test) {
             $test->setAttribute(TestAttempt::STATUS_PASSED, $test->attempts->isNotEmpty());
         });
 
-        return LessonResource::make($lesson);
+        return $lesson;
     }
 
-    public function finishLesson(string $slug): int
+    public function finishLesson(string $slug): string
     {
         $lesson = Lesson::query()
             ->with(['module.course', 'tests'])
             ->where('slug', $slug)
-            ->firstOrFail();
+            ->firstOr(function () {
+                abort(404, 'Урок не найден');
+            });
 
         Gate::authorize('access', $lesson);
 
         $userId = auth()->id();
+
+        if ($lesson->current_auth_progress_exists) {
+            return 'Урок уже сдан';
+        }
 
         if (!$this->allTestsPassed($lesson, $userId)) {
             abort(403, 'Необходимо успешно сдать все тесты этого урока.');
@@ -110,44 +91,80 @@ class LessonService
         return $passedCount >= count($testIds);
     }
 
-    public function markAsCompleted(Lesson $lesson, int $userId): int
+    public function markAsCompleted(Lesson $lesson, int $userId): string
     {
-        $user = auth()->user() ?? User::findOrFail($userId);
-        $course = $lesson->module->course;
-        $userCourse = $user->getUserCourse($course->id);
+        return DB::transaction(function () use ($lesson, $userId) {
+            $user = auth()->user() ?? User::findOrFail($userId);
+            $course = $lesson->module->course;
 
-        if (!$userCourse) {
-            abort(403, 'Пользователь не записан на этот курс.');
-        }
+            $userCourse = $user->getUserCourse($course->id);
 
-        UserCourseLesson::query()->firstOrCreate([
-            'user_course_id' => $userCourse->id,
-            'lesson_id'      => $lesson->id,
-        ]);
-
-        $totalLessonsCount = Lesson::query()
-            ->whereHas('module', fn ($q) => $q->where('course_id', $course->id))
-            ->count();
-
-        $completedLessonsCount = UserCourseLesson::query()
-            ->where('user_course_id', $userCourse->id)
-            ->count();
-
-        $progress = $totalLessonsCount > 0
-            ? round(($completedLessonsCount / $totalLessonsCount) * 100)
-            : 0;
-
-        $userCourse->progress = $progress;
-        $userCourse->save();
-
-        if ($progress >= 100) {
-            try {
-                $this->courseService->completeCourse($userCourse);
-            } catch (\Exception $e) {
-
+            if (!$userCourse) {
+                abort(403, 'Пользователь не записан на этот курс.');
             }
-        }
 
-        return $progress;
+
+            $userCourse = $userCourse->newQuery()->lockForUpdate()->find($userCourse->id);
+
+            UserCourseLesson::query()->firstOrCreate([
+                'user_course_id' => $userCourse->id,
+                'lesson_id'      => $lesson->id,
+            ]);
+
+            $totalLessonsCount = Lesson::query()
+                ->whereHas('module', fn ($q) => $q->where('course_id', $course->id))
+                ->count();
+
+            $completedLessonsCount = UserCourseLesson::query()
+                ->where('user_course_id', $userCourse->id)
+                ->count();
+
+            $progress = $totalLessonsCount > 0
+                ? (int) round(($completedLessonsCount / $totalLessonsCount) * 100)
+                : 0;
+
+            $userCourse->progress = $progress;
+            $userCourse->save();
+
+            if ($progress >= 100) {
+                try {
+                    $this->courseService->completeCourse($userCourse);
+                } catch (Throwable $e) {
+                    Log::error('Failed to complete course after final lesson', [
+                        'user_course_id' => $userCourse->id,
+                        'course_id'      => $course->id,
+                        'user_id'        => $userId,
+                        'exception'      => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return 'Урок успешно сдан';
+        });
+    }
+
+    private function findAdjacentLessonSlug(Lesson $lesson, string $direction): ?string
+    {
+        $courseId = $lesson->module->course_id;
+        $moduleOrder = $lesson->module->order;
+        $lessonOrder = $lesson->sort_order;
+
+        $isNext = $direction === 'next';
+        $comparator = $isNext ? '>' : '<';
+
+        return Lesson::query()
+            ->select('lessons.slug')
+            ->join('modules', 'modules.id', '=', 'lessons.module_id')
+            ->where('modules.course_id', $courseId)
+            ->where(function ($query) use ($comparator, $moduleOrder, $lessonOrder) {
+                $query->where('modules.order', $comparator, $moduleOrder)
+                    ->orWhere(function ($q) use ($comparator, $moduleOrder, $lessonOrder) {
+                        $q->where('modules.order', '=', $moduleOrder)
+                            ->where('lessons.sort_order', $comparator, $lessonOrder);
+                    });
+            })
+            ->orderBy('modules.order', $isNext ? 'asc' : 'desc')
+            ->orderBy('lessons.sort_order', $isNext ? 'asc' : 'desc')
+            ->value('lessons.slug');
     }
 }
