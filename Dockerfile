@@ -18,7 +18,7 @@ RUN apk add --no-cache \
     icu-dev \
     libzip-dev
 
-# PHP расширения
+# PHP расширения (GD уже включает все нужные драйверы)
 RUN docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
@@ -56,15 +56,15 @@ RUN composer dump-autoload --optimize
 # Собираем фронтенд
 RUN npm install && npm run build
 
-# Права на storage и cache
+# Создаем структуру директорий и назначаем владельца www-data
 RUN mkdir -p storage/logs \
              storage/framework/cache \
              storage/framework/sessions \
              storage/framework/views \
+             storage/app/public \
              bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
-
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
 
 # Nginx конфиг
 COPY docker/nginx.conf /etc/nginx/nginx.conf
