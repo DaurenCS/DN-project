@@ -23,21 +23,45 @@ class LessonService
                 }]);
             }])
             ->where('slug', $slug)
-            ->firstOrFail();
+            ->firstOr(function () {
+                abort(404, 'Урок не найден');
+            });
 
         Gate::authorize('access', $lesson);
 
+        $courseId = $lesson->module->course_id;
+        $currentModuleOrder = $lesson->module->order;
+        $currentLessonOrder = $lesson->sort_order;
+
         $previous = Lesson::query()
-            ->where('module_id', $lesson->module_id)
-            ->where('sort_order', '<', $lesson->sort_order)
-            ->orderByDesc('sort_order')
-            ->value('slug');
+            ->select('lessons.slug')
+            ->join('modules', 'modules.id', '=', 'lessons.module_id')
+            ->where('modules.course_id', $courseId)
+            ->where(function ($query) use ($currentModuleOrder, $currentLessonOrder) {
+                $query->where('modules.order', '<', $currentModuleOrder)
+                    ->orWhere(function ($q) use ($currentModuleOrder, $currentLessonOrder) {
+                        $q->where('modules.order', '=', $currentModuleOrder)
+                            ->where('lessons.sort_order', '<', $currentLessonOrder);
+                    });
+            })
+            ->orderBy('modules.order', 'desc')
+            ->orderBy('lessons.sort_order', 'desc')
+            ->value('lessons.slug');
 
         $next = Lesson::query()
-            ->where('module_id', $lesson->module_id)
-            ->where('sort_order', '>', $lesson->sort_order)
-            ->orderBy('sort_order')
-            ->value('slug');
+            ->select('lessons.slug')
+            ->join('modules', 'modules.id', '=', 'lessons.module_id')
+            ->where('modules.course_id', $courseId)
+            ->where(function ($query) use ($currentModuleOrder, $currentLessonOrder) {
+                $query->where('modules.order', '>', $currentModuleOrder)
+                    ->orWhere(function ($q) use ($currentModuleOrder, $currentLessonOrder) {
+                        $q->where('modules.order', '=', $currentModuleOrder)
+                            ->where('lessons.sort_order', '>', $currentLessonOrder);
+                    });
+            })
+            ->orderBy('modules.order', 'asc')
+            ->orderBy('lessons.sort_order', 'asc')
+            ->value('lessons.slug');
 
         $lesson->setAttribute('previous', $previous);
         $lesson->setAttribute('next', $next);

@@ -29,7 +29,9 @@ class CourseService
             ->with(['modules.lessons' => function ($query) {
                 $query->withExists('currentAuthProgress');
             }])
-            ->firstOrFail();
+            ->firstOr(function () {
+                abort(404, 'Данный курс не найден');
+            });
     }
 
     public function getUserCourses(User $user)
@@ -42,7 +44,7 @@ class CourseService
 
     public function start(User $user, string $slug): void
     {
-        $course = Course::query()->where('slug', $slug)->firstOrFail();
+        $course = $this->findActiveCourseBySlug($slug);
 
         $userCourse = UserCourse::query()
             ->where('course_id', $course->id)
@@ -59,32 +61,43 @@ class CourseService
 
         $userCourse->update([
             'start_date' => now(),
-            'status' => 'continue',
+            'status'     => 'continue',
         ]);
     }
 
     public function finish(User $user, string $slug): void
     {
-        $course = Course::query()->where('slug', $slug)->firstOrFail();
+        $course = $this->findActiveCourseBySlug($slug);
 
         $userCourse = UserCourse::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->firstOrFail();
-
 
         $this->completeCourse($userCourse);
     }
 
     public function completeCourse(UserCourse $userCourse): void
     {
-
         if ($userCourse->progress < 100) {
             throw new Exception('Курс еще не пройден полностью.', 400);
         }
 
         $userCourse->update([
             'end_date' => now(),
-            'status' => 'completed',
+            'status'   => 'completed',
         ]);
+    }
+
+    /**
+     * Вспомогательный метод для поиска активного курса по slug
+     */
+    private function findActiveCourseBySlug(string $slug): Course
+    {
+        return Course::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOr(function () {
+                abort(404, 'Данный курс не найден');
+            });
     }
 }
