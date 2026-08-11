@@ -7,7 +7,6 @@ use App\Http\Controllers\Api\LessonController;
 use App\Http\Controllers\Api\TestController;
 use Illuminate\Support\Facades\Route;
 
-// Импортируем новый контроллер тестов
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,9 +24,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Throwable $e, $request) {
             if ($request->is('api/*')) {
+                if ($e instanceof AuthenticationException) {
+                    return response()->json([
+                        'message' => 'Пользователь не авторизован.',
+                    ], 401);
+                }
+
                 if ($e instanceof ModelNotFoundException) {
                     return response()->json(['message' => 'Ресурс не найден'], 404);
                 }
+
                 $statusCode = method_exists($e, 'getStatusCode')
                     ? $e->getStatusCode()
                     : (($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500);

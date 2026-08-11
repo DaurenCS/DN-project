@@ -3,18 +3,23 @@
 namespace App\Filament\Resources;
 
 use App\Enum\Role;
+use App\Exports\UsersTemplateExport;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
+use App\Imports\UsersImport;
 use App\Models\Department;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class UserResource extends Resource
 {
@@ -120,6 +125,53 @@ class UserResource extends Resource
                 Tables\Filters\SelectFilter::make('department')
                     ->relationship('department', 'name')
                     ->label('Подразделение'),
+            ])
+            ->headerActions([
+                Tables\Actions\Action::make('downloadUsersTemplate')
+                    ->label('Скачать шаблон')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->action(fn () => Excel::download(new UsersTemplateExport, 'users_template.xlsx')),
+
+                Tables\Actions\Action::make('importUsers')
+                    ->label('Импорт из Excel')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->form([
+                        Forms\Components\FileUpload::make('file')
+                            ->label('Excel файл')
+                            ->required()
+                            ->disk('local')
+                            ->directory('imports')
+                            ->visibility('private')
+                            ->acceptedFileTypes([
+                                'text/csv',
+                                'application/vnd.ms-excel',
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            ]),
+                    ])
+                    ->action(function (array $data): void {
+                        $import = new UsersImport;
+                        $path = Storage::disk('local')->path($data['file']);
+
+                        Excel::import($import, $path);
+
+                        Storage::disk('local')->delete($data['file']);
+
+                        if ($import->failures()->isNotEmpty()) {
+                            Notification::make()
+                                ->title('Импорт завершён с ошибками')
+                                ->body('Пропущено строк: ' . $import->failures()->count())
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title('Импорт сотрудников завершён')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
