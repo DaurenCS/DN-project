@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCourse;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class CourseService
 {
@@ -21,17 +22,26 @@ class CourseService
 
     public function getCourse(string $slug): Course
     {
-        return Course::query()
+        $course = Course::query()
             ->withAuthUserProgress()
             ->where('slug', $slug)
             ->where('is_active', true)
             ->withCount(['modules', 'lessons'])
-            ->with(['modules.lessons' => function ($query) {
-                $query->withExists('currentAuthProgress');
+            ->with(['modules' => function ($query) {
+                $query->orderBy('order', 'asc');
+            }, 'modules.lessons' => function ($query) {
+                $query->withExists('currentAuthProgress')
+                    ->orderBy('sort_order', 'asc');
             }])
             ->firstOr(function () {
                 abort(404, 'Данный курс не найден');
             });
+
+        $allLessons = $course->modules->flatMap(fn ($module) => $module->lessons);
+
+        app(LessonService::class)->calculateAccessForCourse($course, Auth::guard('sanctum')->user() , $allLessons);
+
+        return $course;
     }
 
     public function getUserCourses(User $user)

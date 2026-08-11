@@ -23,6 +23,7 @@ class ModuleResource extends JsonResource
                     'description' => $lesson->description,
                     'slug' => $lesson->slug,
                     'is_completed' => (bool)$lesson->current_auth_progress_exists,
+                    'can_pass'     => (bool) ($lesson->can_pass ?? false),
                 ];
             });
 

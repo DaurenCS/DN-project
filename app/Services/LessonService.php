@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\TestAttempt;
 use App\Models\User;
@@ -167,4 +168,48 @@ class LessonService
             ->orderBy('lessons.sort_order', $isNext ? 'asc' : 'desc')
             ->value('lessons.slug');
     }
+
+    public function calculateAccessForCourse(Course $course, ?User $user, $lessons)
+    {
+        if (!$user) {
+            foreach ($lessons as $lesson) {
+                $lesson->can_pass = false;
+            }
+            return $lessons;
+        }
+        $userCourse = $user->getUserCourse($course->id);
+
+
+        if (!$userCourse) {
+            foreach ($lessons as $lesson) {
+                $lesson->can_pass = false;
+            }
+            return $lessons;
+        }
+
+        if (!$course->is_sequential) {
+            foreach ($lessons as $lesson) {
+                $lesson->can_pass = true;
+            }
+            return $lessons;
+        }
+
+        $completedLessonIds = UserCourseLesson::query()
+            ->where('user_course_id', $userCourse->id)
+            ->pluck('lesson_id')
+            ->flip();
+
+        $canAccessNext = true;
+
+        foreach ($lessons as $lesson) {
+            $isCompleted = isset($completedLessonIds[$lesson->id]);
+
+            $lesson->can_pass = $canAccessNext;
+
+            $canAccessNext = $lesson->can_pass && $isCompleted;
+        }
+
+        return $lessons;
+    }
+
 }
