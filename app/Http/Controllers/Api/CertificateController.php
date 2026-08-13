@@ -6,19 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CertificateResource;
 use App\Interfaces\CertificateGeneratorInterface;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CertificateController extends Controller
 {
     public function __construct(private CertificateGeneratorInterface $certificateGenerator) {}
 
-    public function generateCertificate($slug)
+    public function generateCertificate(Request $request, string $slug): CertificateResource
     {
-        $userCertificate = $this->certificateGenerator->issueCertificateForCourse($slug);
+        $userCertificate = $this->certificateGenerator->issueCertificateForCourse($request->user(), $slug);
 
-        return response()->json('success', 200);
-
-//        return response()->download($userCertificate->file_path, "Certificate.docx")
-//            ->deleteFileAfterSend(true);
+        return CertificateResource::make($userCertificate);
     }
 
     public function getUserCertificates(Request $request)
@@ -28,4 +26,10 @@ class CertificateController extends Controller
         return CertificateResource::collection($certificates);
     }
 
+    public function downloadCertificate(Request $request, int $certificateId): BinaryFileResponse
+    {
+        $result = $this->certificateGenerator->downloadCertificateForCourse($request->user(), $certificateId);
+
+        return response()->download($result['full_path'], $result['file_name']);
+    }
 }

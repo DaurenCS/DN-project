@@ -7,38 +7,30 @@ use App\Interfaces\DocumentGeneratorInterface;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCertificate;
-use Illuminate\Auth\Access\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CertificateService implements CertificateGeneratorInterface
 {
-    protected $docGenerator;
+    public function __construct(protected DocumentGeneratorInterface $docGenerator) {}
 
-    public function __construct(DocumentGeneratorInterface $docGenerator)
+    public function issueCertificateForCourse(User $user, string $courseSlug): UserCertificate
     {
-        $this->docGenerator = $docGenerator;
-    }
-
-    public function issueCertificateForCourse(string $courseSlug): UserCertificate
-    {
-        $user = Auth::guard('sanctum')->user();
-
         $course = Course::query()
             ->with('certificates')
             ->where('slug', $courseSlug)
-            ->firstOrFail();
+            ->firstOr(fn () => abort(404, 'Курс не найден.'));
 
-//        $userCourse = $user->getUserCourse($course->id);
+        // Важно: Раскомментированные проверки
+        $userCourse = $user->getUserCourse($course->id);
 
-//         if (!$userCourse) {
-//             abort(403, 'Пользователь не записан на этот курс.');
-//         }
-//
-//         if ($userCourse->status != 'completed') {
-//             abort(403, 'Курс не завершен.');
-//         }
+        if (!$userCourse) {
+            abort(403, 'Вы не записаны на этот курс.');
+        }
+
+        if ($userCourse->status !== 'completed') {
+            abort(403, 'Курс еще не завершен.');
+        }
 
         $template = $course->certificates->first();
 
@@ -48,12 +40,13 @@ class CertificateService implements CertificateGeneratorInterface
 
         $courseCertificateId = $template->pivot->id;
 
-        $userCertificate = UserCertificate::where('user_id', $user->id)
+        $existingCertificate = UserCertificate::query()
+            ->where('user_id', $user->id)
             ->where('course_certificate_id', $courseCertificateId)
             ->first();
 
-        if ($userCertificate) {
-            return $userCertificate;
+        if ($existingCertificate) {
+            return $existingCertificate;
         }
 
         Storage::makeDirectory('issued_certificates');
@@ -65,6 +58,7 @@ class CertificateService implements CertificateGeneratorInterface
 
         $templateFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $templateFullPath);
         $outputFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $outputFullPath);
+
         $variables = [
             'student_name' => $user->name,
             'course_title' => $course->title,
@@ -73,22 +67,36 @@ class CertificateService implements CertificateGeneratorInterface
 
         $this->docGenerator->generate($templateFullPath, $outputFullPath, $variables);
 
-        return UserCertificate::query()
-            ->create([
-                'user_id'               => $user->id,
-                'course_certificate_id' => $courseCertificateId,
-                'file_path'             => $fileName,
-                'expires_at'            => now()->addMonths($template->validity_months),
-            ]);
+        return UserCertificate::query()->create([
+            'user_id'               => $user->id,
+            'course_certificate_id' => $courseCertificateId,
+            'file_path'             => $fileName,
+            'expires_at'            => now()->addMonths($template->validity_months),
+        ]);
     }
 
     public function getUserCertificates(User $user)
     {
-        $userCertificates = UserCertificate::query()
+        return UserCertificate::query()
             ->with(['courseCertificate.course'])
             ->where('user_id', $user->id)
             ->get();
+    }
 
-        return $userCertificates;
+    public function downloadCertificateForCourse(User $user, int $certificateId): array
+    {
+        $userCertificate = UserCertificate::query()
+            ->where('id', $certificateId)
+            ->where('user_id', $user->id)
+            ->firstOr(fn () => abort(404, 'Сертификат не найден.'));
+
+        if (!Storage::exists($userCertificate->file_path)) {
+            abort(404, 'Файл сертификата не найден на сервере.');
+        }
+
+        return [
+            'full_path' => Storage::path($userCertificate->file_path),
+            'file_name' => "Certificate_{$userCertificate->id}.docx",
+        ];
     }
 }

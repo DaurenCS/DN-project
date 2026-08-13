@@ -16,10 +16,11 @@ class CertificateResource extends JsonResource
     {
         $course = $this->courseCertificate->course;
         return [
-            'path' => $this->file_path,
-            'expires_at' => $this->expires_at,
-            'created_at' => $this->created_at,
-            'course' => CourseResource::make($course),
+            'id'           => $this->id,
+            'download_url' => route('certificates.download', ['id' => $this->id]),
+            'expires_at'   => $this->expires_at?->format('Y-m-d H:i:s'),
+            'created_at'   => $this->created_at?->format('Y-m-d H:i:s'),
+            'course'       => $course ? CourseResource::make($course) : null,
         ];
     }
 }
