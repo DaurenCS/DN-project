@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Interfaces\CertificateGeneratorInterface;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCourse;
@@ -86,16 +87,20 @@ class CourseService
         $this->completeCourse($userCourse);
     }
 
-    public function completeCourse(UserCourse $userCourse): void
+    public function completeCourse(UserCourse $userCourse, CertificateGeneratorInterface $generator): void
     {
         if ($userCourse->progress < 100) {
             throw new Exception('Курс еще не пройден полностью.', 400);
         }
 
+        $user = Auth::guard('sanctum')->user();
+
         $userCourse->update([
             'end_date' => now(),
             'status'   => 'completed',
         ]);
+
+        $generator->issueCertificateForCourse($userCourse->course()->first()->slug);
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCertificate;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -20,14 +21,16 @@ class CertificateService implements CertificateGeneratorInterface
         $this->docGenerator = $docGenerator;
     }
 
-    public function issueCertificateForCourse(User $user, string $courseSlug): UserCertificate
+    public function issueCertificateForCourse(string $courseSlug): UserCertificate
     {
+        $user = Auth::guard('sanctum')->user();
+
         $course = Course::query()
             ->with('certificates')
             ->where('slug', $courseSlug)
             ->firstOrFail();
 
-        $userCourse = $user->getUserCourse($course->id);
+//        $userCourse = $user->getUserCourse($course->id);
 
 //         if (!$userCourse) {
 //             abort(403, 'Пользователь не записан на этот курс.');

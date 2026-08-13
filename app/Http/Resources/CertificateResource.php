@@ -19,11 +19,7 @@ class CertificateResource extends JsonResource
             'path' => $this->file_path,
             'expires_at' => $this->expires_at,
             'created_at' => $this->created_at,
-            'course' => [
-                'id' => $course->id,
-                'name' => $course->name,
-                'slug' => $course->slug,
-            ]
+            'course' => CourseResource::make($course),
         ];
     }
 }

@@ -11,9 +11,9 @@ class CertificateController extends Controller
 {
     public function __construct(private CertificateGeneratorInterface $certificateGenerator) {}
 
-    public function generateCertificate(Request $request, $slug)
+    public function generateCertificate($slug)
     {
-        $userCertificate = $this->certificateGenerator->issueCertificateForCourse($request->user(), $slug);
+        $userCertificate = $this->certificateGenerator->issueCertificateForCourse($slug);
 
         return response()->json('success', 200);
 
