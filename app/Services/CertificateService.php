@@ -21,7 +21,6 @@ class CertificateService implements CertificateGeneratorInterface
             ->where('slug', $courseSlug)
             ->firstOr(fn () => abort(404, 'Курс не найден.'));
 
-        // Важно: Раскомментированные проверки
         $userCourse = $user->getUserCourse($course->id);
 
         if (!$userCourse) {
@@ -49,11 +48,15 @@ class CertificateService implements CertificateGeneratorInterface
             return $existingCertificate;
         }
 
+        if (!Storage::disk('local')->exists($template->template_path)) {
+            abort(404, 'Файл шаблона не найден на сервере.');
+        }
+
         Storage::makeDirectory('issued_certificates');
 
         $fileName = 'issued_certificates/' . Str::uuid() . '.docx';
 
-        $templateFullPath = Storage::path($template->template_path);
+        $templateFullPath = Storage::disk('local')->path($template->template_path);
         $outputFullPath = Storage::path($fileName);
 
         $templateFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $templateFullPath);
