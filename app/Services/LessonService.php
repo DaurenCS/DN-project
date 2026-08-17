@@ -15,8 +15,6 @@ use function PHPUnit\Framework\isEmpty;
 
 class LessonService
 {
-    public function __construct(protected CourseService $courseService) {}
-
     public function getLesson(string $slug): Lesson
     {
         $userId = auth()->id();
@@ -132,7 +130,7 @@ class LessonService
 
             if ($progress >= 100) {
                 try {
-                    $this->courseService->completeCourse($userCourse);
+                    app(CourseService::class)->completeCourse($userCourse);
                 } catch (Throwable $e) {
                     Log::error('Failed to complete course after final lesson', [
                         'user_course_id' => $userCourse->id,

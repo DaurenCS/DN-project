@@ -86,11 +86,10 @@ class CertificateService implements CertificateGeneratorInterface
             ->get();
     }
 
-    public function downloadCertificateForCourse(User $user, int $certificateId): array
+    public function downloadCertificateForCourse(User $user, int $userCertificateId): array
     {
         $userCertificate = UserCertificate::query()
-            ->where('id', $certificateId)
-            ->where('user_id', $user->id)
+            ->where('id', $userCertificateId)
             ->firstOr(fn () => abort(404, 'Сертификат не найден.'));
 
         if (!Storage::exists($userCertificate->file_path)) {
