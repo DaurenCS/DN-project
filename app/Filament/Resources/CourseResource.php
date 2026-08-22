@@ -100,6 +100,7 @@ class CourseResource extends Resource
                 ->schema([
                     Forms\Components\FileUpload::make('image')
                         ->label('Обложка курса')
+                        ->disk('s3')
                         ->image()
                         ->directory('courses')
                         ->columnSpanFull(),

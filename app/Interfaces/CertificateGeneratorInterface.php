@@ -11,5 +11,5 @@ interface CertificateGeneratorInterface
 
     public function getUserCertificates(User $user);
 
-    public function downloadCertificateForCourse(User $user, int $userCertificateId): array;
+    public function downloadCertificateForCourse(User $user, int $userCertificateId);
 }

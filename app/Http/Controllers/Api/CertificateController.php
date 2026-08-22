@@ -26,10 +26,8 @@ class CertificateController extends Controller
         return CertificateResource::collection($certificates);
     }
 
-    public function downloadCertificate(Request $request, int $userCertificateId): BinaryFileResponse
+    public function downloadCertificate(Request $request, int $userCertificateId)
     {
-        $result = $this->certificateGenerator->downloadCertificateForCourse($request->user(), $userCertificateId);
-
-        return response()->download($result['full_path'], $result['file_name']);
+        return $this->certificateGenerator->downloadCertificateForCourse($request->user(), $userCertificateId);
     }
 }

@@ -26,7 +26,7 @@ class CertificatesRelationManager extends RelationManager
 
             Forms\Components\FileUpload::make('template_path')
                 ->label('Файл шаблона (.docx)')
-                ->disk('local')
+                ->disk('s3')
                 ->directory('certificate_templates')
                 ->acceptedFileTypes([
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

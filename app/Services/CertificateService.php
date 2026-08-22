@@ -48,27 +48,34 @@ class CertificateService implements CertificateGeneratorInterface
             return $existingCertificate;
         }
 
-        if (!Storage::disk('local')->exists($template->template_path)) {
+        if (!Storage::exists($template->template_path)) {
             abort(404, 'Файл шаблона не найден на сервере.');
         }
 
-        Storage::makeDirectory('issued_certificates');
+        $tempTemplatePath = tempnam(sys_get_temp_dir(), 'tpl_') . '.docx';
+        $tempOutputPath = tempnam(sys_get_temp_dir(), 'out_') . '.docx';
 
-        $fileName = 'issued_certificates/' . Str::uuid() . '.docx';
+        try {
+            file_put_contents($tempTemplatePath, Storage::get($template->template_path));
 
-        $templateFullPath = Storage::disk('local')->path($template->template_path);
-        $outputFullPath = Storage::path($fileName);
+            $dates = $this->getFormattedDates();
 
-        $templateFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $templateFullPath);
-        $outputFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $outputFullPath);
+            $variables = [
+                'date_kz'       => $dates['date_kz'],
+                'date_ru'       => $dates['date_ru'],
+                'user_name'     => $user->name . '' . $user->second_name,
+                'user_position' => $user->position ?? 'Сотрудник',
+            ];
 
-        $variables = [
-            'student_name' => $user->name,
-            'course_title' => $course->title,
-            'date'         => now()->format('d.m.Y'),
-        ];
+            $this->docGenerator->generate($tempTemplatePath, $tempOutputPath, $variables);
 
-        $this->docGenerator->generate($templateFullPath, $outputFullPath, $variables);
+            $fileName = 'issued_certificates/' . Str::uuid() . '.docx';
+            Storage::put($fileName, file_get_contents($tempOutputPath));
+
+        } finally {
+            @unlink($tempTemplatePath);
+            @unlink($tempOutputPath);
+        }
 
         return UserCertificate::query()->create([
             'user_id'               => $user->id,
@@ -86,19 +93,45 @@ class CertificateService implements CertificateGeneratorInterface
             ->get();
     }
 
-    public function downloadCertificateForCourse(User $user, int $userCertificateId): array
+    public function downloadCertificateForCourse(User $user, int $userCertificateId)
     {
         $userCertificate = UserCertificate::query()
+            ->where('user_id', $user->id)
             ->where('id', $userCertificateId)
             ->firstOr(fn () => abort(404, 'Сертификат не найден.'));
 
+
         if (!Storage::exists($userCertificate->file_path)) {
-            abort(404, 'Файл сертификата не найден на сервере.');
+            abort(404, 'Файл сертификата не найден в хранилище.');
         }
 
+        $fileName = "Certificate_{$userCertificate->id}.docx";
+
+        return Storage::download($userCertificate->file_path, $fileName);
+    }
+
+    private function getFormattedDates(): array
+    {
+        $now = now();
+        $day = $now->format('d');
+        $year = $now->format('Y');
+        $monthNum = (int) $now->format('n');
+
+        $monthsKz = [
+            1 => 'қаңтар', 2 => 'ақпан', 3 => 'наурыз', 4 => 'сәуір',
+            5 => 'мамыр', 6 => 'маусым', 7 => 'шілде', 8 => 'тамыз',
+            9 => 'қыркүйек', 10 => 'қазан', 11 => 'қараша', 12 => 'желтоқсан'
+        ];
+
+        $monthsRu = [
+            1 => 'января', 2 => 'февраля', 3 => 'марта', 4 => 'апреля',
+            5 => 'мая', 6 => 'июня', 7 => 'июля', 8 => 'августа',
+            9 => 'сентября', 10 => 'октября', 11 => 'ноября', 12 => 'декабря'
+        ];
+
         return [
-            'full_path' => Storage::path($userCertificate->file_path),
-            'file_name' => "Certificate_{$userCertificate->id}.docx",
+            'date_kz' => "«{$day}» " . $monthsKz[$monthNum] . " {$year} г.",
+            'date_ru' => "«{$day}» " . $monthsRu[$monthNum] . " {$year} г.",
         ];
     }
 }

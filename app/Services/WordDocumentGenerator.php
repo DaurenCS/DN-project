@@ -17,4 +17,5 @@ class WordDocumentGenerator implements DocumentGeneratorInterface
 
         $processor->saveAs($outputPath);
     }
+
 }
