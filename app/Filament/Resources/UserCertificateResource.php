@@ -1,0 +1,130 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Enum\CertificateStatus;
+use App\Models\CertificateApproval;
+use App\Models\UserCertificate;
+use App\Services\CertificateDocumentService;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use App\Filament\Resources\UserCertificateResource\Pages;
+
+class UserCertificateResource extends Resource
+{
+    protected static ?string $model = UserCertificate::class;
+    protected static ?string $navigationLabel = 'Заявки на сертификаты';
+    protected static ?string $navigationIcon = 'heroicon-o-document-check';
+
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('status', CertificateStatus::PENDING)
+            ->whereHas('courseCertificate.course.commissionMembers', function ($query) {
+                $query->where('users.id', auth()->id());
+            });
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Студент')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('courseCertificate.course.name')
+                    ->label('Курс'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Дата заявки')
+                    ->dateTime('d.m.Y H:i'),
+                // Показываем сколько человек из комиссии уже проголосовали
+                Tables\Columns\TextColumn::make('approvals_count')
+                    ->counts('approvals')
+                    ->label('Голосов «За»'),
+            ])
+            ->actions([
+                // КНОПКА «ОДОБРИТЬ»
+                Tables\Actions\Action::make('approve')
+                    ->label('Одобрить')
+                    ->color('success')
+                    ->icon('heroicon-o-check-circle')
+                    // Скрываем кнопку, если этот член комиссии УЖЕ голосовал
+                    ->hidden(fn (UserCertificate $record) => $record->approvals()->where('commission_user_id', auth()->id())->exists())
+                    ->action(function (UserCertificate $record, CertificateDocumentService $documentService) {
+                        DB::transaction(function () use ($record, $documentService) {
+                            // 1. Записываем голос
+                            CertificateApproval::create([
+                                'user_certificate_id' => $record->id,
+                                'commission_user_id'  => auth()->id(),
+                                'action'              => 'approve',
+                            ]);
+
+                            // 2. Считаем нужную комиссию
+                            $course = $record->courseCertificate->course;
+                            $requiredVotes = $course->commissionMembers()->count();
+                            $currentVotes = $record->approvals()->where('action', 'approve')->count();
+
+                            // 3. Если проголосовали ВСЕ
+                            if ($currentVotes >= $requiredVotes) {
+                                $user = $record->user;
+                                $variables = [
+                                    'date_kz'       => now()->format('d.m.Y'),
+                                    'date_ru'       => now()->format('d.m.Y'),
+                                    'user_name'     => trim($user->name . ' ' . $user->second_name),
+                                    'user_position' => $user->position ?? 'Сотрудник',
+                                ];
+
+                                $filePath = $documentService->generateAndUpload(
+                                    $record->courseCertificate->certificate->template_path,
+                                    $variables
+                                );
+
+                                $record->update([
+                                    'status'    => CertificateStatus::APPROVED,
+                                    'file_path' => $filePath,
+                                ]);
+                            }
+                        });
+                    }),
+
+                // КНОПКА «ОТКЛОНИТЬ»
+                Tables\Actions\Action::make('reject')
+                    ->label('Отклонить')
+                    ->color('danger')
+                    ->icon('heroicon-o-x-circle')
+                    ->hidden(fn (UserCertificate $record) => $record->approvals()->where('commission_user_id', auth()->id())->exists())
+                    ->requiresConfirmation()
+                    ->action(function (UserCertificate $record) {
+                        DB::transaction(function () use ($record) {
+                            CertificateApproval::create([
+                                'user_certificate_id' => $record->id,
+                                'commission_user_id'  => auth()->id(),
+                                'action'              => 'reject',
+                            ]);
+
+                            $record->update(['status' => CertificateStatus::REJECTED]);
+                        });
+                    }),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListUserCertificates::route('/'),
+            'create' => Pages\CreateUserCertificate::route('/create'),
+            'edit' => Pages\EditUserCertificate::route('/{record}/edit'),
+        ];
+    }
+}

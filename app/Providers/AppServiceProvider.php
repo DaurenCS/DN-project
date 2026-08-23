@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\CertificateRequested;
 use App\Interfaces\CertificateGeneratorInterface;
 use App\Interfaces\DocumentGeneratorInterface;
+use App\Listeners\SendCommissionNotificationListener;
 use App\Services\CertificateService;
 use App\Services\WordDocumentGenerator;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,5 +34,10 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        Event::listen(
+            CertificateRequested::class,
+            SendCommissionNotificationListener::class
+        );
     }
 }

@@ -14,7 +14,7 @@ class CertificateController extends Controller
 
     public function generateCertificate(Request $request, string $slug): CertificateResource
     {
-        $userCertificate = $this->certificateGenerator->issueCertificateForCourse($request->user(), $slug);
+        $userCertificate = $this->certificateGenerator->requestCertificateForCourse($request->user(), $slug);
 
         return CertificateResource::make($userCertificate);
     }

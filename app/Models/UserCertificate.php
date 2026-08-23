@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enum\CertificateStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UserCertificate extends Model
 {
@@ -13,10 +15,12 @@ class UserCertificate extends Model
         'course_certificate_id',
         'file_path',
         'expires_at',
+        'status',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'status' => CertificateStatus::class,
     ];
 
     public function courseCertificate() {
@@ -32,5 +36,15 @@ class UserCertificate extends Model
     }
     public function isValid(): bool {
         return $this->expires_at === null || $this->expires_at->isFuture();
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(CertificateApproval::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

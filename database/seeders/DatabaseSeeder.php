@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             'curator',
             'advisor',
             'student',
+            'commission',
         ];
 
         foreach ($roles as $roleName) {

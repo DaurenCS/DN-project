@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CourseResource\Pages;
 use App\Filament\Resources\CourseResource\RelationManagers\CertificatesRelationManager;
+use App\Filament\Resources\CourseResource\RelationManagers\CommissionMembersRelationManager;
 use App\Filament\Resources\CourseResource\RelationManagers\ModuleRelationManager;
 use App\Models\Course;
 use App\Models\CourseType;
@@ -114,6 +115,7 @@ class CourseResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Обложка')
+                    ->disk('s3')
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('name')
@@ -184,6 +186,7 @@ class CourseResource extends Resource
         return [
             ModuleRelationManager::class,
             CertificatesRelationManager::class,
+            CommissionMembersRelationManager::class,
         ];
     }
 
