@@ -33,5 +33,10 @@ class AuthController extends Controller
         return $this->authService->update($request);
     }
 
+    public function main()
+    {
+        return $this->authService->main();
+    }
+
 
 }

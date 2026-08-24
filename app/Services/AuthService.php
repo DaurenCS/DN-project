@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Http\Resources\UserDetailsResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
 
@@ -80,6 +81,14 @@ class AuthService
             'message' => 'Профиль успешно обновлен',
             'user'    => new UserResource($user->refresh())
         ], 200);
+
+    }
+
+    public function main()
+    {
+        $user = auth()->user()->load('department');
+
+        return new UserDetailsResource($user);
 
     }
 }
