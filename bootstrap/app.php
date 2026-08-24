@@ -15,7 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
-        $middleware->statefulApi();
+
+        // $middleware->statefulApi();
+
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+        ]);
+
         $middleware->append(\App\Http\Middleware\SetLocale::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
