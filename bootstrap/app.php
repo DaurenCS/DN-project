@@ -16,10 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
 
-        // $middleware->statefulApi();
-
+        // Отключаем проверку CSRF для всех API-маршрутов
         $middleware->validateCsrfTokens(except: [
             'api/*',
+            'api/auth/*',
         ]);
 
         $middleware->append(\App\Http\Middleware\SetLocale::class);
@@ -31,9 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Throwable $e, $request) {
             if ($request->is('api/*')) {
                 if ($e instanceof AuthenticationException) {
-                    return response()->json([
-                        'message' => 'Пользователь не авторизован.',
-                    ], 401);
+                    return response()->json(['message' => 'Пользователь не авторизован.'], 401);
                 }
 
                 if ($e instanceof ModelNotFoundException) {
