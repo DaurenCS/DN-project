@@ -33,18 +33,13 @@ class CourseService
 
         $course = Course::query()
             ->withAuthUserProgress()
+            ->withCurrentLessonData()
             ->where('slug', $slug)
             ->where('is_active', true)
             ->withCount(['modules', 'lessons'])
-            ->with([
-                'modules' => fn ($query) => $query->orderBy('order', 'asc'),
-                'modules.lessons' => fn ($query) => $query->withExists('currentAuthProgress')->orderBy('sort_order', 'asc')
-            ])
             ->firstOr(fn () => abort(404, 'Данный курс не найден'));
 
-        $allLessons = $course->modules->flatMap(fn ($module) => $module->lessons);
-
-        $this->lessonService->calculateAccessForCourse($course, $user, $allLessons);
+        $this->lessonService->calculateAccessForCourse($course, $user, $course->allLessons());
 
         return $course;
     }
@@ -102,7 +97,7 @@ class CourseService
             ]);
         });
 
-        $this->certificateGenerator->issueCertificateForCourse(
+        $this->certificateGenerator->requestCertificateForCourse(
             $user,
             $userCourse->course->slug
         );

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Translatable\HasTranslations;
 
@@ -29,6 +30,8 @@ class Course extends Model
         'description',
     ];
 
+    protected ?Collection $cachedAllLessons = null;
+
     public function scopeWithAuthUserProgress(Builder $query): Builder
     {
         $user = Auth::guard('sanctum')->user();
@@ -38,6 +41,16 @@ class Course extends Model
         return $query->with(['users' => function ($q) use ($user) {
             $q->where('users.id', $user->id);
         }]);
+    }
+
+    public function scopeWithCurrentLessonData(Builder $query): Builder
+    {
+        return $query->with([
+            'modules' => fn ($q) => $q->orderBy('order'),
+            'modules.lessons' => fn ($q) => $q
+                ->withExists('currentAuthProgress')
+                ->orderBy('sort_order'),
+        ]);
     }
 
     public function courseType()
@@ -62,15 +75,49 @@ class Course extends Model
             ->withTimestamps();
     }
 
+    public function allLessons(): Collection
+    {
+        if ($this->cachedAllLessons !== null) {
+            return $this->cachedAllLessons;
+        }
+
+        if (!$this->relationLoaded('modules')) {
+            $this->load(['modules' => fn ($q) => $q->orderBy('order')]);
+        }
+
+        return $this->cachedAllLessons = $this->modules->flatMap(
+            fn ($module) => $module->lessons
+        );
+    }
+
     public function getCurrentLesson()
     {
-        if (!$this->relationLoaded('modules')) {
-            return null;
+        if (!$this->hasCurrentLessonProgressLoaded()) {
+            $this->cachedAllLessons = null;
+            $this->load([
+                'modules' => fn ($q) => $q->orderBy('order'),
+                'modules.lessons' => fn ($q) => $q
+                    ->withExists('currentAuthProgress')
+                    ->orderBy('sort_order'),
+            ]);
         }
-        return $this->modules
-            ->flatMap(fn($module) => $module->lessons)
-            ->first(fn($lesson) => !$lesson->current_auth_progress_exists);
 
+        return $this->allLessons()
+            ->first(fn ($lesson) => !$lesson->current_auth_progress_exists);
+    }
+
+    protected function hasCurrentLessonProgressLoaded(): bool
+    {
+        if (!$this->relationLoaded('modules')) {
+            return false;
+        }
+
+        return $this->modules->every(
+            fn ($module) => $module->relationLoaded('lessons')
+                && $module->lessons->every(
+                    fn ($lesson) => array_key_exists('current_auth_progress_exists', $lesson->getAttributes())
+                )
+        );
     }
 
     public function certificates() {
@@ -82,6 +129,4 @@ class Course extends Model
     {
         return $this->belongsToMany(User::class, 'course_commission', 'course_id', 'user_id');
     }
-
-
 }
