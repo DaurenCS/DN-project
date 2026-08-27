@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Interfaces\CertificateGeneratorInterface;
+use App\Jobs\GenerateCourseCertificateJob;
 use App\Models\Course;
 use App\Models\User;
 use App\Models\UserCourse;
@@ -20,24 +21,31 @@ class CourseService
     public function getCourses(int $perPage = 10)
     {
         return Course::query()
-            ->withCount(['modules', 'lessons'])
+            ->select([
+                'id',
+                'name',
+                'description',
+                'slug',
+                'image',
+                'is_active',
+                'created_at'
+            ])
             ->where('is_active', true)
             ->withAuthUserProgress()
+            ->withCount(['modules', 'lessons'])
             ->orderBy('id', 'desc')
             ->paginate($perPage);
     }
 
     public function getCourse(string $slug, ?User $user = null): Course
     {
-        $user = $user ?? Auth::guard('sanctum')->user();
-
         $course = Course::query()
-            ->withAuthUserProgress()
-            ->withCurrentLessonData()
             ->where('slug', $slug)
             ->where('is_active', true)
+            ->withAuthUserProgress($user?->id)
+            ->withCurrentLessonData()
             ->withCount(['modules', 'lessons'])
-            ->firstOr(fn () => abort(404, 'Данный курс не найден'));
+            ->firstOrFail();
 
         $this->lessonService->calculateAccessForCourse($course, $user, $course->allLessons());
 
@@ -54,21 +62,24 @@ class CourseService
 
     public function start(User $user, string $slug): void
     {
-        $course = $this->findActiveCourseBySlug($slug);
+        $course = Course::query()
+            ->select('id', 'slug')
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->withAuthUserProgress($user->id)
+            ->firstOr(fn () => abort(404, 'Данный курс не найден'));
 
-        $userCourse = UserCourse::query()
-            ->where('course_id', $course->id)
-            ->where('user_id', $user->id)
-            ->firstOr(fn () => abort(403, 'Вы не записаны на этот курс'));
+        $userCourse = $course->currentUserCourse;
 
-        if ($userCourse->start_date) {
+        if (!$userCourse) {
+            abort(403, 'Вы не записаны на этот курс');
+        }
+
+        if ($userCourse->isStarted()) {
             abort(400, 'Курс уже начат');
         }
 
-        $userCourse->update([
-            'start_date' => now(),
-            'status'     => 'continue',
-        ]);
+        $userCourse->start();
     }
 
     public function finish(User $user, string $slug): void
@@ -84,30 +95,17 @@ class CourseService
 
     public function completeCourse(UserCourse $userCourse, ?User $user = null): void
     {
-        if ($userCourse->progress < 100) {
+        if (!$userCourse->isFullyPassed()) {
             abort(400, 'Курс еще не пройден полностью.');
         }
 
         $user = $user ?? $userCourse->user;
 
         DB::transaction(function () use ($userCourse) {
-            $userCourse->update([
-                'end_date' => now(),
-                'status'   => 'completed',
-            ]);
+            $userCourse->finish();
+            GenerateCourseCertificateJob::dispatch($userCourse)->afterCommit();
         });
 
-        $this->certificateGenerator->requestCertificateForCourse(
-            $user,
-            $userCourse->course->slug
-        );
-    }
 
-    private function findActiveCourseBySlug(string $slug): Course
-    {
-        return Course::query()
-            ->where('slug', $slug)
-            ->where('is_active', true)
-            ->firstOr(fn () => abort(404, 'Данный курс не найден'));
     }
 }

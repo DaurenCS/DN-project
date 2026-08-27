@@ -10,6 +10,7 @@ use App\Services\CourseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Auth;
 
 class CourseController extends Controller
 {
@@ -24,7 +25,8 @@ class CourseController extends Controller
 
     public function getCourse(Request $request, string $slug): CourseDetailResource
     {
-        $course = $this->courseService->getCourse($slug, $request->user());
+        $user = Auth::guard('sanctum')->user();
+        $course = $this->courseService->getCourse($slug, $user);
 
         return CourseDetailResource::make($course);
     }

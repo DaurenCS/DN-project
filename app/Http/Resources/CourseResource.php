@@ -8,55 +8,25 @@ use Illuminate\Support\Facades\Storage;
 
 class CourseResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        $userProgress = $this->extractUserProgress();
+        $userProgress = $this->getAuthUserProgress();
+
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'description' => $this->description,
-            'slug' => $this->slug,
-            'image' => $this->image ? Storage::url($this->image) : null,
-            'is_active' => (bool)$this->is_active,
+            'id'            => $this->id,
+            'name'          => $this->name,
+            'description'   => $this->description,
+            'slug'          => $this->slug,
+            'image'         => $this->image ? Storage::url($this->image) : null,
+            'is_active'     => (bool) $this->is_active,
 
             'user_progress' => $userProgress,
-            'user_status' => $userProgress ? $userProgress['status'] : 'buy',
+            'user_status'   => $userProgress['status'] ?? 'buy',
 
             'modules_count' => $this->whenCounted('modules'),
             'lessons_count' => $this->whenCounted('lessons'),
 
-            'created_at' => $this->created_at->toISOString(),
+            'created_at'    => $this->created_at?->toISOString(),
         ];
     }
-
-    protected function extractUserProgress()
-    {
-        if ($this->pivot) {
-            return [
-                'start_date'              => $this->pivot->start_date,
-                'progress' => (int) $this->pivot->progress,
-                'completed_at'        => $this->pivot->end_date,
-                'status' => $this->pivot->status,
-            ];
-        }
-
-        if ($this->relationLoaded('users') && $this->users->isNotEmpty()) {
-            $pivot = $this->users->first()->pivot;
-
-            return [
-                'start_date'              => $pivot->start_date,
-                'progress' => (int) $pivot->progress,
-                'completed_at'        => $pivot->end_date,
-                'status' => $pivot->status,
-            ];
-        }
-
-        return null;
-    }
-
 }

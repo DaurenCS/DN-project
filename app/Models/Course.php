@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -32,15 +33,37 @@ class Course extends Model
 
     protected ?Collection $cachedAllLessons = null;
 
-    public function scopeWithAuthUserProgress(Builder $query): Builder
+
+    public function currentUserCourse(): HasOne
     {
-        $user = Auth::guard('sanctum')->user();
-        if (!$user) {
+        return $this->hasOne(UserCourse::class, 'course_id');
+    }
+
+    public function scopeWithAuthUserProgress(Builder $query, ?int $userId = null): Builder
+    {
+        $userId = $userId ?? Auth::guard('sanctum')->id();
+        if (!$userId) {
             return $query;
         }
-        return $query->with(['users' => function ($q) use ($user) {
-            $q->where('users.id', $user->id);
-        }]);
+        return $query->with(['currentUserCourse' => fn ($q) => $q->where('user_id', $userId)]);
+    }
+
+    public function getAuthUserProgress(): ?array
+    {
+        $progress = $this->pivot
+            ?? $this->currentUserCourse
+            ?? ($this->relationLoaded('users') ? $this->users->first()?->pivot : null);
+
+        if (!$progress) {
+            return null;
+        }
+
+        return [
+            'start_date'   => $progress->start_date,
+            'progress'     => (int) $progress->progress,
+            'completed_at' => $progress->end_date,
+            'status'       => $progress->status,
+        ];
     }
 
     public function scopeWithCurrentLessonData(Builder $query): Builder
@@ -63,7 +86,8 @@ class Course extends Model
         return $this->hasMany(Module::class)->orderBy('order');
     }
 
-    public function lessons() {
+    public function lessons()
+    {
         return $this->hasManyThrough(Lesson::class, Module::class);
     }
 
@@ -71,7 +95,7 @@ class Course extends Model
     {
         return $this->belongsToMany(User::class, 'user_course')
             ->using(UserCourse::class)
-            ->withPivot(['id','start_date', 'end_date', 'progress', 'status'])
+            ->withPivot(['id', 'start_date', 'end_date', 'progress', 'status'])
             ->withTimestamps();
     }
 
@@ -121,7 +145,8 @@ class Course extends Model
         );
     }
 
-    public function certificates() {
+    public function certificates()
+    {
         return $this->belongsToMany(Certificate::class, 'course_certificate')
             ->withPivot('id');
     }

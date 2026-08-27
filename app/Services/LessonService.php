@@ -7,6 +7,7 @@ use App\Models\Lesson;
 use App\Models\TestAttempt;
 use App\Models\User;
 use App\Models\UserCourseLesson;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -171,47 +172,31 @@ class LessonService
             ->value('lessons.slug');
     }
 
-    public function calculateAccessForCourse(Course $course, ?User $user, $lessons)
+    public function calculateAccessForCourse(Course $course, ?User $user, Collection $lessons): void
     {
-        if (!$user) {
+        if (!$user || !$course->currentUserCourse) {
             foreach ($lessons as $lesson) {
                 $lesson->can_pass = false;
             }
-            return $lessons;
-        }
-        $userCourse = $user->getUserCourse($course->id);
-
-
-        if (!$userCourse) {
-            foreach ($lessons as $lesson) {
-                $lesson->can_pass = false;
-            }
-            return $lessons;
+            return;
         }
 
         if (!$course->is_sequential) {
             foreach ($lessons as $lesson) {
                 $lesson->can_pass = true;
             }
-            return $lessons;
+            return;
         }
-
-        $completedLessonIds = UserCourseLesson::query()
-            ->where('user_course_id', $userCourse->id)
-            ->pluck('lesson_id')
-            ->flip();
 
         $canAccessNext = true;
 
         foreach ($lessons as $lesson) {
-            $isCompleted = isset($completedLessonIds[$lesson->id]);
-
             $lesson->can_pass = $canAccessNext;
+
+            $isCompleted = (bool) ($lesson->current_auth_progress_exists ?? false);
 
             $canAccessNext = $lesson->can_pass && $isCompleted;
         }
-
-        return $lessons;
     }
 
 }
