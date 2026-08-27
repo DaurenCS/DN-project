@@ -92,18 +92,19 @@ class Course extends Model
 
     public function getCurrentLesson()
     {
-        if (!$this->hasCurrentLessonProgressLoaded()) {
-            $this->cachedAllLessons = null;
-            $this->load([
-                'modules' => fn ($q) => $q->orderBy('order'),
-                'modules.lessons' => fn ($q) => $q
-                    ->withExists('currentAuthProgress')
-                    ->orderBy('sort_order'),
-            ]);
+        if ($this->hasCurrentLessonProgressLoaded()) {
+            return $this->allLessons()
+                ->first(fn ($lesson) => !$lesson->current_auth_progress_exists);
         }
 
-        return $this->allLessons()
-            ->first(fn ($lesson) => !$lesson->current_auth_progress_exists);
+        return Lesson::query()
+            ->select('lessons.id', 'lessons.name', 'lessons.slug', 'lessons.sort_order', 'lessons.module_id')
+            ->join('modules', 'modules.id', '=', 'lessons.module_id')
+            ->where('modules.course_id', $this->id)
+            ->whereDoesntHave('currentAuthProgress')
+            ->orderBy('modules.order', 'asc')
+            ->orderBy('lessons.sort_order', 'asc')
+            ->first();
     }
 
     protected function hasCurrentLessonProgressLoaded(): bool

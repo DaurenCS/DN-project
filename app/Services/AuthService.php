@@ -6,7 +6,11 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserDetailsResource;
 use App\Http\Resources\UserResource;
+use App\Models\Lesson;
+use App\Models\UserCertificate;
+use App\Models\UserCourse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class AuthService
 {
@@ -86,9 +90,42 @@ class AuthService
 
     public function main()
     {
-        $user = auth()->user()->load('department');
+        $userId = auth()->id();
 
-        return new UserDetailsResource($user);
+        return Cache::remember("user_dashboard_{$userId}", 300, function () use ($userId) {
+            $user = auth()->user()->load('department');
 
+            $courseStats = UserCourse::where('user_id', $userId)
+                ->selectRaw("
+                COUNT(CASE WHEN status != 'completed' THEN 1 END) as active_count,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count
+            ")
+                ->first();
+
+            $certificatesCount = UserCertificate::where('user_id', $userId)->count();
+
+            $lastUserCourse = UserCourse::where('user_id', $userId)
+                ->where('status', '!=', 'completed')
+                ->with('course:id,name,slug')
+                ->latest('updated_at')
+                ->first();
+
+            $nextLesson = null;
+
+            if ($lastUserCourse && $lastUserCourse->course) {
+                $nextLesson = $lastUserCourse->course->getCurrentLesson();
+            }
+
+            return new UserDetailsResource([
+                'user' => $user,
+                'stats' => [
+                    'active_courses_count'    => (int) ($courseStats->active_count ?? 0),
+                    'completed_courses_count' => (int) ($courseStats->completed_count ?? 0),
+                    'certificates_count'      => $certificatesCount,
+                ],
+                'last_course' => $lastUserCourse?->course,
+                'next_lesson' => $nextLesson,
+            ]);
+        });
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Lesson;
 use App\Models\TestAttempt;
 use App\Models\User;
 use App\Models\UserCourseLesson;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -126,6 +127,7 @@ class LessonService
 
             $userCourse->progress = $progress;
             $userCourse->save();
+            Cache::forget("user_dashboard_" . auth()->id());
 
             if ($progress >= 100) {
                 try {
