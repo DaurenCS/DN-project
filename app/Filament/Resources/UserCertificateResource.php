@@ -16,9 +16,24 @@ use App\Filament\Resources\UserCertificateResource\Pages;
 class UserCertificateResource extends Resource
 {
     protected static ?string $model = UserCertificate::class;
+
+
     protected static ?string $navigationLabel = 'Заявки на сертификаты';
+    protected static ?string $navigationGroup = 'Управление персоналом';
     protected static ?string $navigationIcon = 'heroicon-o-document-check';
 
+    protected static ?string $modelLabel = 'Заявки на сертификаты';
+    protected static ?string $pluralModelLabel = 'Заявки на сертификаты';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['admin', 'commission']);
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
 
     public static function getEloquentQuery(): Builder
     {

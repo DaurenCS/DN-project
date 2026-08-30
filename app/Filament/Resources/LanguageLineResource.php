@@ -19,6 +19,11 @@ class LanguageLineResource extends Resource
     protected static ?string $modelLabel = 'Перевод';
     protected static ?string $pluralModelLabel = 'Переводы интерфейса';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['admin']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form

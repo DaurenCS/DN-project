@@ -53,7 +53,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                \App\Http\Middleware\EnsureUserHasRole::class . ':admin',
+                \App\Http\Middleware\EnsureUserHasRole::class . ':admin,hr,commission',
             ]);
     }
 }

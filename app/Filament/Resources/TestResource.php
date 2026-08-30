@@ -20,6 +20,11 @@ class TestResource extends Resource
     protected static ?string $modelLabel = 'Тест';
     protected static ?string $pluralModelLabel = 'Тесты';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['admin', 'curator']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([

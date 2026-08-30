@@ -29,6 +29,11 @@ class DepartmentResource extends Resource
     protected static ?string $pluralModelLabel = 'База департаментов';
     protected static ?int $navigationSort = 2;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['admin', 'curator']);
+    }
+
 
     public static function form(Form $form): Form
     {
