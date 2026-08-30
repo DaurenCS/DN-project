@@ -36,7 +36,11 @@ return [
     */
 
     'mailers' => [
-
+        'mailjet' => [
+            'transport' => 'mailjet',
+            'key' => env('MAILJET_APIKEY_PUBLIC'),
+            'secret' => env('MAILJET_APIKEY_PRIVATE'),
+        ],
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),

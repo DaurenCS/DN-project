@@ -9,7 +9,9 @@ use App\Listeners\SendCommissionNotificationListener;
 use App\Services\CertificateService;
 use App\Services\WordDocumentGenerator;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Mailer\Bridge\Mailjet\Transport\MailjetApiTransport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,5 +41,12 @@ class AppServiceProvider extends ServiceProvider
             CertificateRequested::class,
             SendCommissionNotificationListener::class
         );
+
+        Mail::extend('mailjet', function (array $config) {
+            return new MailjetApiTransport(
+                $config['key'],
+                $config['secret']
+            );
+        });
     }
 }
