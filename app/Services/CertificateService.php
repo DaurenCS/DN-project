@@ -27,15 +27,6 @@ class CertificateService implements CertificateGeneratorInterface
         $template = $course->certificates->first();
         if (!$template) abort(404, 'Шаблон не найден.');
 
-        $existingCertificate = UserCertificate::query()
-            ->where('user_id', $user->id)
-            ->where('course_certificate_id', $template->pivot->id)
-            ->where('expires_at', '>', now())
-            ->first();
-
-        if ($existingCertificate) {
-            return $existingCertificate;
-        }
 
         $certificate = UserCertificate::create([
             'user_id'               => $user->id,

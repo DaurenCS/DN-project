@@ -1,23 +1,20 @@
 <?php
+
 namespace App\Listeners;
 
 use App\Events\CertificateRequested;
-use App\Models\User;
 use App\Notifications\CertificateApprovalNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Notification;
 
-class SendCommissionNotificationListener
+class SendCommissionNotificationListener implements ShouldQueue
 {
     public function handle(CertificateRequested $event): void
     {
-        $certificate = $event->certificate;
-
-        $course = $certificate->getCourseAttribute();
-
-        $commissionMembers = $course->commissionMembers;
+        $commissionMembers = $event->certificate->course->commissionMembers;
 
         if ($commissionMembers->isNotEmpty()) {
-            Notification::send($commissionMembers, new CertificateApprovalNotification($certificate));
+            Notification::send($commissionMembers, new CertificateApprovalNotification($event->certificate));
         }
     }
 }

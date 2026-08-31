@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Events;
 
 use App\Models\UserCertificate;
@@ -8,5 +9,9 @@ use Illuminate\Queue\SerializesModels;
 class CertificateRequested
 {
     use Dispatchable, SerializesModels;
-    public function __construct(public UserCertificate $certificate) {}
+
+    public function __construct(public UserCertificate $certificate)
+    {
+        $this->certificate->loadMissing('courseCertificate.course.commissionMembers');
+    }
 }
