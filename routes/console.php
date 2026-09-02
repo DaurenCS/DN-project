@@ -10,3 +10,5 @@ Artisan::command('inspire', function () {
 
 
 Schedule::command('tests:fail-expired')->everyMinute();
+
+Schedule::command('certificates:check-expiring')->dailyAt('01:00');

@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Enum\CertificateStatus;
 use App\Models\CertificateApproval;
 use App\Models\UserCertificate;
+use App\Notifications\CertificateApprovedNotification;
+use App\Notifications\CertificateRejectedNotification;
 use App\Services\CertificateDocumentService;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -67,23 +69,21 @@ class UserCertificateResource extends Resource
                     ->label('Одобрить')
                     ->color('success')
                     ->icon('heroicon-o-check-circle')
-                    // Скрываем кнопку, если этот член комиссии УЖЕ голосовал
                     ->hidden(fn (UserCertificate $record) => $record->approvals()->where('commission_user_id', auth()->id())->exists())
                     ->action(function (UserCertificate $record, CertificateDocumentService $documentService) {
-                        DB::transaction(function () use ($record, $documentService) {
-                            // 1. Записываем голос
+                        $isFullyApproved = false;
+
+                        DB::transaction(function () use ($record, $documentService, &$isFullyApproved) {
                             CertificateApproval::create([
                                 'user_certificate_id' => $record->id,
                                 'commission_user_id'  => auth()->id(),
                                 'action'              => 'approve',
                             ]);
 
-                            // 2. Считаем нужную комиссию
                             $course = $record->courseCertificate->course;
                             $requiredVotes = $course->commissionMembers()->count();
                             $currentVotes = $record->approvals()->where('action', 'approve')->count();
 
-                            // 3. Если проголосовали ВСЕ
                             if ($currentVotes >= $requiredVotes) {
                                 $user = $record->user;
                                 $variables = [
@@ -102,11 +102,21 @@ class UserCertificateResource extends Resource
                                     'status'    => CertificateStatus::APPROVED,
                                     'file_path' => $filePath,
                                 ]);
+
+                                $isFullyApproved = true;
                             }
                         });
+
+                        // Уведомляем студента после успешного транзакционного коммита
+                        $record->user->notify(
+                            new CertificateApprovedNotification(
+                                certificate: $record,
+                                commissionMember: auth()->user(),
+                                isFullyApproved: $isFullyApproved
+                            )
+                        );
                     }),
 
-                // КНОПКА «ОТКЛОНИТЬ»
                 Tables\Actions\Action::make('reject')
                     ->label('Отклонить')
                     ->color('danger')
@@ -123,6 +133,14 @@ class UserCertificateResource extends Resource
 
                             $record->update(['status' => CertificateStatus::REJECTED]);
                         });
+
+                        // Уведомляем студента об отклонении
+                        $record->user->notify(
+                            new CertificateRejectedNotification(
+                                certificate: $record,
+                                commissionMember: auth()->user()
+                            )
+                        );
                     }),
             ]);
     }

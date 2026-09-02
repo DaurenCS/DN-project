@@ -12,7 +12,7 @@ class FailExpiredTestAttempts extends Command
      *
      * @var string
      */
-    protected $signature = 'app:fail-expired-test-attempts';
+    protected $signature = 'tests:fail-expired';
 
     /**
      * The console command description.

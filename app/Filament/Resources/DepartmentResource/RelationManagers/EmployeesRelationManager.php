@@ -4,6 +4,7 @@ namespace App\Filament\Resources\DepartmentResource\RelationManagers;
 
 use App\Models\Course;
 use App\Models\User;
+use App\Notifications\CourseAssignedNotification;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -15,6 +16,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Notification;
 
 class EmployeesRelationManager extends RelationManager
 {
@@ -78,24 +80,33 @@ class EmployeesRelationManager extends RelationManager
                             ->searchable(),
                     ])
                     ->action(function ($livewire, array $data) {
-                        $employees = $livewire->ownerRecord->employees;
+                        $department = $livewire->ownerRecord;
 
-                        foreach ($employees as $employee) {
-                            $employee->courses()->syncWithoutDetaching([
-                                $data['course_id'] => [
-                                    'progress' => 0,
-                                    'start_date' => null,
-                                ]
-                            ]);
+                        $employees = $department->employees;
+
+                        if ($employees->isEmpty()) {
+                            return;
                         }
+
+                        $course = Course::find($data['course_id']);
+                        if (!$course) return;
+
+                        $employeeIds = $employees->pluck('id')->toArray();
+
+                        $course->users()->syncWithoutDetaching(
+                            array_fill_keys($employeeIds, [
+                                'progress' => 0,
+                                'start_date' => null,
+                            ])
+                        );
+
+                        Notification::send($employees, new CourseAssignedNotification($course));
                     })
                     ->requiresConfirmation()
                     ->modalHeading('Назначить курс всему отделу')
-                    ->modalDescription('Сотрудники смогут начать обучение, нажав кнопку "Старт" в своем профиле.')
+                    ->modalDescription('Сотрудники получат уведомление и смогут начать обучение.')
             ])
             ->actions([
-//                Tables\Actions\EditAction::make(),
-                // Твой кастомный открепитель
                 Tables\Actions\Action::make('detach')
                     ->label('Открепить')
                     ->icon('heroicon-o-x-circle')
