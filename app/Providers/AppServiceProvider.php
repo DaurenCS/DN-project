@@ -37,11 +37,6 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
-        Event::listen(
-            CertificateRequested::class,
-            SendCommissionNotificationListener::class
-        );
-
         Mail::extend('mailjet', function (array $config) {
             return new MailjetApiTransport(
                 $config['key'],

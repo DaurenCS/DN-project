@@ -11,7 +11,7 @@ class SendCommissionNotificationListener implements ShouldQueue
 {
     public function handle(CertificateRequested $event): void
     {
-        $commissionMembers = $event->certificate->course->commissionMembers;
+        $commissionMembers = $event->certificate->course->commissionMembers->unique('id');
 
         if ($commissionMembers->isNotEmpty()) {
             Notification::send($commissionMembers, new CertificateApprovalNotification($event->certificate));

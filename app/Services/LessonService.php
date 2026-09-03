@@ -28,7 +28,7 @@ class LessonService
                 'tests' => function ($query) use ($userId) {
                     $query->with(['attempts' => function ($q) use ($userId) {
                         $q->where('user_id', $userId)
-                            ->where('status', TestAttempt::STATUS_PASSED);
+                            ->latest();
                     }]);
                 },
             ])
@@ -43,7 +43,23 @@ class LessonService
         $lesson->setAttribute('next', $this->findAdjacentLessonSlug($lesson, 'next'));
 
         $lesson->tests->each(function ($test) {
-            $test->setAttribute(TestAttempt::STATUS_PASSED, $test->attempts->isNotEmpty());
+            $attempts = $test->attempts;
+
+            if ($attempts->isEmpty()) {
+                $status = 'start';
+            } elseif ($attempts->contains('status', TestAttempt::STATUS_PASSED)) {
+                $status = 'passed';
+            } else {
+                $latestAttempt = $attempts->first();
+
+                $status = match ($latestAttempt->status) {
+                    TestAttempt::STATUS_IN_PROGRESS => 'in_progress',
+                    TestAttempt::STATUS_FAILED      => 'failed',
+                    default                         => 'start',
+                };
+            }
+
+            $test->setAttribute('status', $status);
         });
 
         return $lesson;

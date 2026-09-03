@@ -19,32 +19,33 @@ abstract class BaseNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
+        $channels = ['mail', 'database'];
 
         return $channels;
     }
 
-//    public function toMail(object $notifiable): MailMessage
-//    {
-//        $payload = $this->getPayload($notifiable);
-//
-//        $mail = (new MailMessage)
-//            ->subject($payload->title)
-//            ->greeting("Здравствуйте, {$notifiable->name}!")
-//            ->line($payload->body);
-//
-//        if ($payload->actionUrl) {
-//            $mail->action($payload->actionText, $payload->actionUrl);
-//        }
-//
-//        return $mail;
-//    }
+    public function toMail(object $notifiable): MailMessage
+    {
+        $payload = $this->getPayload($notifiable);
+
+        $mail = (new MailMessage)
+            ->subject($payload->title)
+            ->greeting("Здравствуйте, {$notifiable->name}!")
+            ->line($payload->body);
+
+        if ($payload->actionUrl) {
+            $mail->action($payload->actionText, $payload->actionUrl);
+        }
+
+        return $mail;
+    }
 
     public function toArray(object $notifiable): array
     {
         $payload = $this->getPayload($notifiable);
 
         return array_merge([
+            'format' => 'filament',
             'title' => $payload->title,
             'message' => $payload->body,
             'url' => $payload->actionUrl,
