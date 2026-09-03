@@ -44,7 +44,7 @@ class TestService
 
         if ($existingAttempt) {
             if (
-                $existingAttempt->status === 'in_progress' &&
+                $existingAttempt->status === TestAttempt::STATUS_IN_PROGRESS &&
                 !($test->duration > 0 && now()->greaterThan($existingAttempt->started_at->addMinutes($test->duration)))
             ) {
                 return $existingAttempt;
@@ -53,7 +53,7 @@ class TestService
             TestAttemptAnswer::where('test_attempt_id', $existingAttempt->id)->delete();
 
             $existingAttempt->update([
-                'status'          => 'in_progress',
+                'status'          => TestAttempt::STATUS_IN_PROGRESS,
                 'attempts'        => $existingAttempt->attempts + 1,
                 'question_ids'    => $shuffledQuestionIds,
                 'total_questions' => count($shuffledQuestionIds),
